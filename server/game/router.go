@@ -42,7 +42,7 @@ func (gs *game_store) gameConnHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if e != nil {
-			gs.Error(e)
+			gs.Info(utils.LogFields{"error": e.Error()})
 
 			conn, inrupt := gs.mel_store.Upgrader.Upgrade(w, r, w.Header())
 			if inrupt != nil {
