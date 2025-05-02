@@ -1,7 +1,7 @@
 # 測試範例
 
 ``` sh
-cd /home/chris/git/wander/local_test
+cd /home/chris/git/wander/env_local
 
 sudo docker-compose up -d
 

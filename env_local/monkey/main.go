@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/url"
 	"os"
@@ -25,7 +26,10 @@ type CustomHTTPResponse struct {
 var (
 	logger = utils.NewConsoleLogger(1)
 	monkey = melody.NewMonkey()
-	token  string
+)
+
+var (
+	token = flag.String("token", "", "token")
 )
 
 func getToken() (token string) {
@@ -57,13 +61,16 @@ func getToken() (token string) {
 }
 
 func dial() {
-	token := getToken()
+	var tmp = *token
+	if len(tmp) == 0 {
+		tmp = getToken()
+	}
 
 	u := url.URL{
 		Scheme:   "ws",
 		Host:     ":8081",
 		Path:     "/ws/00/0000",
-		RawQuery: fmt.Sprintf("token=%s", token),
+		RawQuery: fmt.Sprintf("token=%s", tmp),
 	}
 	logger.Debug(utils.LogFields{"url": u.String()})
 
