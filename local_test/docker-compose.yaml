@@ -1,0 +1,25 @@
+services:
+  redis:
+    image: redis:4.0.2-alpine
+    container_name: local-redis
+    ports:
+      - "6379:6379"
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: local-mariadb
+    ports:
+      - "3306:3306"
+    environment:
+      MARIADB_USER: chris
+      MARIADB_PASSWORD: 123456
+      MARIADB_DATABASE: game_dev
+      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "1"
+    volumes:
+      - /home/chris/data_store/game_dev:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      retries: 5
+      start_period: 5s

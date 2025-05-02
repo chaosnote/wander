@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = ".;message";
+
+message GameMessage {
+  enum MessageType {
+    REQUEST = 0;
+    RESPONSE = 1;
+    NOTIFY = 2;
+  }
+  MessageType type = 1;
+  // by fsm
+  string action = 2;
+  // custom by action 
+  bytes payload = 4;
+  // Error Code
+  optional string error = 8;
+  //
+  int64 timestamp = 9;
+}
