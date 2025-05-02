@@ -60,17 +60,12 @@ func getToken() (token string) {
 	return
 }
 
-func dial() {
-	var tmp = *token
-	if len(tmp) == 0 {
-		tmp = getToken()
-	}
-
+func dial(value string) {
 	u := url.URL{
 		Scheme:   "ws",
 		Host:     ":8081",
 		Path:     "/ws/00/0000",
-		RawQuery: fmt.Sprintf("token=%s", tmp),
+		RawQuery: fmt.Sprintf("token=%s", value),
 	}
 	logger.Debug(utils.LogFields{"url": u.String()})
 
@@ -85,6 +80,11 @@ func dial() {
 
 func main() {
 	flag.Parse()
+
+	var tmp_token = *token
+	if len(tmp_token) == 0 {
+		tmp_token = getToken()
+	}
 
 	logger.Debug(utils.LogFields{"tip": "enter"})
 
@@ -103,13 +103,8 @@ func main() {
 	})
 
 	for i := 0; i < 1; i++ {
-		go dial()
+		go dial(tmp_token)
 	}
-
-	// go func() {
-	// 	time.Sleep(2)
-	// 	os.Exit(0)
-	// }()
 
 	q := make(chan os.Signal, 1)
 	signal.Notify(q, syscall.SIGINT, syscall.SIGTERM)
