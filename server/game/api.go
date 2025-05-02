@@ -51,8 +51,6 @@ func (gs *game_store) login(params member.ReqLogin) (output member.ResLogin, e e
 
 	output = body.Content
 
-	gs.Debug(utils.LogFields{"player": output})
-
 	return
 }
 
@@ -69,6 +67,4 @@ func (gs *game_store) logout(params map[string]any) {
 	}
 
 	client.R().SetBody(params).Post(u.String())
-
-	gs.Debug(utils.LogFields{"player": params})
 }
