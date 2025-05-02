@@ -11,4 +11,7 @@ set DB_USER=chris
 set DB_PW=123456
 set DB_NAME=game_dev
 
+@REM NATS
+set NATS_ADDR=192.168.0.236:4222
+
 go mod tidy

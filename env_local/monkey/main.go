@@ -84,6 +84,8 @@ func dial() {
 }
 
 func main() {
+	flag.Parse()
+
 	logger.Debug(utils.LogFields{"tip": "enter"})
 
 	monkey.HandleConnect(func(s *melody.Session) {

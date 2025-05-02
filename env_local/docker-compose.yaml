@@ -23,3 +23,11 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
+
+  nats:
+    image: nats:2.10.26-alpine
+    container_name: local-nats
+    ports:
+      - "8222:8222"
+      - "4222:4222"
+    command: "--http_port 8222"

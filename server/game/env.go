@@ -20,5 +20,7 @@ var (
 	// redis_pw     = os.Getenv("REDIS_PW")
 	redis_db_idx = os.Getenv("REDIS_DB_INDEX")
 
+	nats_addr = os.Getenv("NATS_ADDR")
+
 	log_dir = os.Getenv("LOG_DIR")
 )

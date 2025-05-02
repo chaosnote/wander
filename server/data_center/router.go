@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/shopspring/decimal"
 
 	"github.com/chaosnote/wander/model"
@@ -16,42 +15,6 @@ import (
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/utils"
 )
-
-func (ds *dc_store) initRouter() {
-	router := mux.NewRouter()
-	router.Use(ds.loggingMiddleware)
-
-	var e error
-
-	sub := router.PathPrefix("/guest").Subrouter()
-	sub.Use(ds.guestMiddleware)
-	sub.HandleFunc(`/new`, ds.guestNewHandler).Methods(http.MethodGet)
-
-	sub = router.PathPrefix("/player").Subrouter()
-	sub.HandleFunc(`/login`, ds.apiLoginHandler).Methods(http.MethodPost)
-	sub.HandleFunc(`/logout`, ds.apiLogoutHandler).Methods(http.MethodPost)
-
-	e = router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		template, e := route.GetPathTemplate()
-		if e != nil {
-			return e
-		}
-		ds.Debug(utils.LogFields{"path": template})
-		return nil
-	})
-
-	if e != nil {
-		panic(e)
-	}
-
-	ds.Debug(utils.LogFields{"dc_addr": dc_addr})
-	go func() {
-		e = http.ListenAndServe(dc_addr, router)
-		if e != nil && e != http.ErrServerClosed {
-			panic(e)
-		}
-	}()
-}
 
 func (ds *dc_store) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -179,10 +142,10 @@ func (ds *dc_store) apiLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	player.UName = user.TheirUName
 
-	_, ok := ds.addPlayer(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
+	old_player, ok := ds.addPlayer(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
 	if !ok {
-		// ds.nats_store.Publish(utils.Subject(old_player.GateID, subj.PLAYER_KICK, old_player.UID), nil)
 		e = errs.E13001.Error()
+		ds.pubPlayerKick(old_player, e)
 		return
 	}
 

@@ -11,11 +11,13 @@ func (gs *game_store) handleConnect(session *melody.Session) {
 	player := session.MustGet(model.UID).(member.Player)
 	session.Set(model.UID, player)
 	gs.game_impl.PlayerJoin(player, session)
+	gs.addSession(player.UID, session)
 }
 
 func (gs *game_store) handleDisconnect(session *melody.Session) {
 	player := session.MustGet(model.UID).(member.Player)
 	gs.game_impl.PlayerExit(player, session)
+	gs.rmSession(player.UID)
 	gs.logout(map[string]any{model.UID: player.UID})
 }
 

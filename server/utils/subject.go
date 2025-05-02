@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// params step
+// sep .
 //
 //	where<to/from>
 //	action

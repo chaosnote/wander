@@ -14,6 +14,7 @@ import (
 func main() {
 	logger := utils.NewConsoleLogger(1)
 	server := dc.NewDCStore(logger)
+	server.Start()
 
 	logger.Debug(utils.LogFields{"tip": "server starting"})
 

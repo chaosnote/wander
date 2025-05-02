@@ -11,9 +11,11 @@ import (
 	"github.com/go-redis/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/nats-io/nats.go"
 	"github.com/shopspring/decimal"
 
 	"github.com/chaosnote/wander/model/member"
+	"github.com/chaosnote/wander/model/subj"
 	"github.com/chaosnote/wander/utils"
 )
 
@@ -39,9 +41,11 @@ type GameStore interface {
 type game_store struct {
 	utils.LogStore
 
-	db_store    *sql.DB
-	mel_store   *melody.Melody
-	redis_store *redis.Client
+	db_store      *sql.DB
+	nats_store    *nats.Conn
+	mel_store     *melody.Melody
+	redis_store   *redis.Client
+	session_store map[string]*melody.Session
 
 	game_impl GameImpl
 }
@@ -50,7 +54,8 @@ type game_store struct {
 
 func NewGameStore(provider GameImpl) GameStore {
 	return &game_store{
-		game_impl: provider,
+		game_impl:     provider,
+		session_store: map[string]*melody.Session{},
 	}
 }
 
@@ -101,7 +106,13 @@ func (gs *game_store) Start() {
 	gs.mel_store.HandleDisconnect(gs.handleDisconnect)
 	gs.mel_store.HandleMessage(gs.handleMessage)
 	gs.mel_store.HandleMessageBinary(gs.handleMessageBinary)
-	// gorilla
+	// nats
+	gs.nats_store, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
+	if e != nil {
+		panic(e)
+	}
+	gs.nats_store.Subscribe(utils.Subject(*GAME_ID, subj.PLAYER_KICK, "*"), gs.handlePlayerKick)
+	// router
 	router := mux.NewRouter()
 	router.Use(gs.loggingMiddleware)
 
