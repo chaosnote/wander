@@ -11,7 +11,9 @@ rm /dist/* -fr && cd /app/wander/env_test && sh build.sh
 ``` sh
 cd /home/chris/git/wander/env_test
 
-sudo docker-compose -f docker-compose-init.yaml up -d
+sudo docker-compose -f step_0.yaml up -d
+sudo docker-compose -f step_0.yaml down
 
-sudo docker-compose -f docker-compose-server.yaml up -d
+sudo docker-compose -f step_1.yaml up -d
+sudo docker-compose -f step_1.yaml down --remove-orphans
 ```

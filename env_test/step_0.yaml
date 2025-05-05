@@ -1,9 +1,16 @@
+networks:
+  test-network:
+    driver: bridge
+    name: test-network
+
 services:
   redis:
     image: redis:4.0.2-alpine
     container_name: test-redis
     ports:
-     - "6379:6379"
+      - "6379:6379"
+    networks:
+      - test-network
 
   mariadb:
     image: mariadb:10.11
@@ -16,13 +23,15 @@ services:
       MARIADB_DATABASE: game_dev
       MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "1"
     volumes:
-     - /home/chris/data_store/game_dev:/var/lib/mysql
+      - /home/chris/data_store/game_dev:/var/lib/mysql
     restart: always
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       retries: 5
       start_period: 5s
+    networks:
+      - test-network
 
   nats:
     image: nats:2.10.26-alpine
@@ -31,28 +40,18 @@ services:
       - "8222:8222"
       - "4222:4222"
     command: "--http_port 8222"
+    networks:
+      - test-network
 
-  data-center:
+  make-file:
     image: golang:1.24-bullseye
-    container_name: test-data-center
+    container_name: make-file
     working_dir: /app
-    environment:
-      - DC_ID=28c2f2c2-590f-442d-bf80-7e6bbeb4c471
-      - DC_ADDR=:8080
-      - USE_GUEST=1
-      - DB_ADDR=test-mariadb:3306
-      - DB_USER=chris
-      - DB_PW=123456
-      - DB_NAME=game_dev
-      - NATS_ADDR=test-nats:4222
-    depends_on:
-      - redis
-      - mariadb
-      - nats
     volumes:
-      - /home/chris/git/wander/env_test/dist:/app
-    ports:
-      - 8080:8080
+      - /home/chris/git:/app
+      - /home/chris/git/wander/env_test/dist:/dist
+    command: sh -c "cd /app/wander/env_test && sh build.sh"
     stdin_open: true
     tty: true
-    command: bash
+    networks:
+      - test-network

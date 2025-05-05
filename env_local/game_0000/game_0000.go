@@ -4,6 +4,8 @@ import (
 	"github.com/chaosnote/melody"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/utils"
+
+	_ "github.com/looplab/fsm"
 )
 
 type Game0000 struct {
