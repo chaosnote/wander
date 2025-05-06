@@ -1,4 +1,4 @@
-package framework
+package utils
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ type CreateFunc func() any
 type DI interface {
 	Set(key string, create CreateFunc) (e error)
 	Get(key string) (service any, ok bool)
+	MustGet(key string) (service any)
 }
 
 //-----------------------------------------------
@@ -35,7 +36,7 @@ func (s di_store) MustGet(key string) (service any) {
 	var ok bool
 	service, ok = s[key]
 	if !ok {
-		panic(fmt.Errorf("service unset"))
+		panic(fmt.Errorf("service(%s) unset", key))
 	}
 	return
 }
