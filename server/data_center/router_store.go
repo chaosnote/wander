@@ -2,10 +2,8 @@ package datacenter
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -16,45 +14,7 @@ import (
 	"github.com/chaosnote/wander/utils"
 )
 
-func (ds *dc_store) loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
-		next.ServeHTTP(w, r)
-		endTime := time.Now()
-
-		duration := endTime.Sub(startTime)
-
-		ds.Info(utils.LogFields{
-			"method":    r.Method,
-			"path":      r.RequestURI,
-			"duration":  fmt.Sprintf("%v", duration),
-			"client_ip": utils.ParseIP(r),
-		})
-	})
-}
-
-func (ds *dc_store) guestMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if use_guest != "1" {
-
-			ds.Info(utils.LogFields{
-				"method":    r.Method,
-				"use_guest": use_guest,
-				"client_ip": utils.ParseIP(r),
-			})
-
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Content-Type", "application/json")
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (ds *dc_store) guestNewHandler(w http.ResponseWriter, r *http.Request) {
+func (ds *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	const (
 		agent_id     = "57b4866772254df0b157e7966a7c12d2"
 		their_ugrant = "1"
@@ -73,11 +33,8 @@ func (ds *dc_store) guestNewHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var uid string
-	row := ds.db_store.QueryRow("CALL upsert_user(?, ?, ?, ?, ?) ;", agent_id, their_uid, their_uname, their_ugrant, time.Now().UTC().Format(time.DateTime))
-	e = row.Scan(&uid)
+	uid, e = ds.UpsertUser(agent_id, their_uname, their_ugrant, their_uid)
 	if e != nil {
-		ds.Info(utils.LogFields{"error": e.Error()}) // [TODO]DS.Error
-		e = errs.E12001.Error()
 		return
 	}
 
@@ -98,7 +55,7 @@ func (ds *dc_store) guestNewHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(output)
 }
 
-func (ds *dc_store) apiLoginHandler(w http.ResponseWriter, r *http.Request) {
+func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 	var e error
 
 	defer func() {
@@ -112,17 +69,17 @@ func (ds *dc_store) apiLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	e = utils.HttpRequestJSONUnmarshal(r.Body, &player.ReqLogin)
 	if e != nil {
-		ds.Info(utils.LogFields{"error": e.Error()})
+		s.Info(utils.LogFields{"error": e.Error()})
 		e = errs.E10004.Error()
 		return
 	}
 
-	ds.Debug(utils.LogFields{"params": player.ReqLogin})
+	s.Debug(utils.LogFields{"params": player.ReqLogin})
 
 	var data []byte
 	data, e = utils.HexDecode(player.Token)
 	if e != nil {
-		ds.Info(utils.LogFields{"error": e.Error()})
+		s.Info(utils.LogFields{"error": e.Error()})
 		e = errs.E00002.Error()
 		return
 	}
@@ -130,41 +87,41 @@ func (ds *dc_store) apiLoginHandler(w http.ResponseWriter, r *http.Request) {
 	var plaintext []byte
 	plaintext, e = utils.RSADecode(string(data))
 	if e != nil {
-		ds.Info(utils.LogFields{"error": e.Error()})
+		s.Info(utils.LogFields{"error": e.Error()})
 		e = errs.E00003.Error()
 		return
 	}
 
 	player.UID = string(plaintext)
-	user, e := ds.findUserByID(player.UID) // 是否為已註冊的使用者
+	user, e := s.FindUserByID(player.UID) // 是否為已註冊的使用者
 	if e != nil {
 		return
 	}
 	player.UName = user.TheirUName
 
-	old_player, ok := ds.addPlayer(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
+	old_player, ok := s.AddPlayer(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
 	if !ok {
 		e = errs.E13001.Error()
-		ds.pubPlayerKick(old_player, e)
+		s.PlayerKick(old_player, e)
 		return
 	}
 
-	e = ds.updateUserLastIPByID(player.UID, player.IP)
+	e = s.UpdateUserLastIPByID(player.UID, player.IP)
 	if e != nil {
 		return
 	}
 
 	output, e := json.Marshal(api.HttpResponse{Code: api.HttpStatusOK, Content: player.ResLogin})
 	if e != nil {
-		ds.Error(e)
+		s.Error(e)
 		e = errs.E00001.Error()
 		return
 	}
 	w.Write(output)
 }
 
-func (ds *dc_store) apiLogoutHandler(w http.ResponseWriter, r *http.Request) {
+func (s *store) HandleAPILogout(w http.ResponseWriter, r *http.Request) {
 	var body map[string]string
 	utils.HttpRequestJSONUnmarshal(r.Body, &body)
-	ds.rmPlayer(body[model.UID])
+	s.RemovePlayer(body[model.UID])
 }

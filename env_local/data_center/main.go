@@ -2,32 +2,29 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	dc "github.com/chaosnote/wander/data_center"
-	"github.com/chaosnote/wander/utils"
 )
 
 func main() {
-	logger := utils.NewConsoleLogger(1)
-	server := dc.NewDCStore(logger)
+	server := dc.NewDCStore()
 	server.Start()
 
-	logger.Debug(utils.LogFields{"tip": "server starting"})
+	log.Println("server starting")
 
 	q := make(chan os.Signal, 1)
 	signal.Notify(q, syscall.SIGINT, syscall.SIGTERM)
 	<-q
 
-	logger.Debug(utils.LogFields{"tip": "server closing"})
+	log.Println("server closing")
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	log.Println("server stop")
 	server.Close()
-
-	logger.Debug(utils.LogFields{"tip": "server stop"})
-	logger.Flush()
 }
