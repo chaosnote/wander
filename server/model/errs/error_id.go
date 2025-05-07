@@ -74,7 +74,7 @@ const (
 // Game 錯誤
 //
 // 30000 Http       錯誤起點
-// 31000 NatsIO     錯誤起點
+// 31000 Socket     錯誤起點
 
 const (
 	E30000 error_id = iota + 30000 //
@@ -87,5 +87,5 @@ const (
 
 const (
 	E31000 error_id = iota + 31000 //
-	E31001                         // 嘗試 PING 次數超過上限
+	E31001                         // 封包傳遞失敗
 )

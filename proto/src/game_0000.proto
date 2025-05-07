@@ -1,9 +1,11 @@
 syntax = "proto3";
 
-option go_package = ".;message";
+option go_package = ".;protobuf";
 
 message Player{
     string name = 1;
 }
 
-message Init{}
+message Init{
+    Player player = 1 ;
+}

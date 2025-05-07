@@ -1,9 +1,14 @@
 package main
 
 import (
+	"idv/chris/model/protobuf"
+
 	"github.com/chaosnote/wander/game"
+	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
+	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/utils"
+	"google.golang.org/protobuf/proto"
 
 	_ "github.com/looplab/fsm"
 )
@@ -27,10 +32,19 @@ func (g *Game0000) Close() {
 func (g *Game0000) PlayerJoin(player member.Player) {
 	// 玩家上線
 	// 玩家基礎資訊
-	// session.Write([]byte(player.UID))
+	content := &protobuf.Player{}
+	content.Name = player.UName
+
+	payload, e := proto.Marshal(content)
+	if e != nil {
+		g.Info(utils.LogFields{"error": e.Error()})
+		e = errs.E00005.Error()
+		return
+	}
+	g.GameStore.SendGamePack(player, "init", payload)
 }
 
-func (g *Game0000) PlayerMessageBinary(player member.Player, message []byte) {
+func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameMessage) {
 	// 玩家封包
 }
 

@@ -14,7 +14,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nats-io/nats.go"
 	"github.com/shopspring/decimal"
+	"google.golang.org/protobuf/proto"
 
+	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/model/subj"
@@ -39,6 +41,8 @@ type GameStore interface {
 	Close() // 遊戲關閉、此階段會呼叫開發者的對應函式
 
 	RegisterHandler(provider GameImpl) // 註冊開發者實作函式
+
+	SendGamePack(player member.Player, action string, payload []byte) (e error) // 發送遊戲封包
 }
 
 //-----------------------------------------------
@@ -55,6 +59,37 @@ type store struct {
 
 func (s *store) RegisterHandler(provider GameImpl) {
 	s.game_impl = provider
+}
+
+func (s *store) SendGamePack(player member.Player, action string, payload []byte) (e error) {
+	session, ok := s.SessionGet(player.UID)
+	if !ok {
+		e = errs.E30002.Error()
+		s.Info(utils.LogFields{"error": e.Error()})
+		return
+	}
+
+	var pack = &message.GameMessage{
+		Type:      message.GameMessage_RESPONSE,
+		Action:    action,
+		Payload:   payload,
+		Timestamp: utils.UTCUnix(),
+	}
+
+	var content []byte
+	content, e = proto.Marshal(pack)
+	if e != nil {
+		s.Info(utils.LogFields{"error": e.Error()})
+		e = errs.E00005.Error()
+		return
+	}
+	e = session.WriteBinary(content)
+	if e != nil {
+		s.Info(utils.LogFields{"error": e.Error()})
+		e = errs.E31001.Error()
+		return
+	}
+	return
 }
 
 //-----------------------------------------------

@@ -5,16 +5,19 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"idv/chris/model/protobuf"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/chaosnote/melody"
 	"github.com/go-resty/resty/v2"
+	"google.golang.org/protobuf/proto"
 
+	"github.com/chaosnote/melody"
 	"github.com/chaosnote/wander/model/api"
+	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/utils"
 )
 
@@ -99,7 +102,19 @@ func main() {
 		logger.Debug(utils.LogFields{"msg": string(msg)})
 	})
 	monkey.HandleMessageBinary(func(s *melody.Session, b []byte) {
-		logger.Debug(utils.LogFields{"msg": "binary"})
+		pack := &message.GameMessage{}
+		e := proto.Unmarshal(b, pack)
+		if e != nil {
+			panic(e)
+		}
+		logger.Debug(utils.LogFields{"action": pack.GetAction()})
+
+		content := &protobuf.Player{}
+		e = proto.Unmarshal(pack.GetPayload(), content)
+		if e != nil {
+			panic(e)
+		}
+		logger.Debug(utils.LogFields{"name": content.GetName()})
 	})
 
 	for i := 0; i < 1; i++ {

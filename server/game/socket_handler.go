@@ -15,8 +15,8 @@ func (s *store) handleConnect(session *melody.Session) {
 	player := session.MustGet(model.UID).(member.Player)
 	session.Set(model.UID, player)
 	s.Debug(utils.LogFields{"join_uid": player.UID})
-	s.game_impl.PlayerJoin(player)
 	s.SessionAdd(player.UID, session)
+	s.game_impl.PlayerJoin(player)
 }
 
 func (s *store) handleDisconnect(session *melody.Session) {
