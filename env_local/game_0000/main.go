@@ -13,7 +13,7 @@ import (
 
 func main() {
 	base := game.NewGameStore()
-	base.RegisterHandler(&Game0000{})
+	base.RegisterHandler(&Game0000{GameStore: base})
 	base.Start()
 
 	log.Println("server starting")

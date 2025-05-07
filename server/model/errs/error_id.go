@@ -18,6 +18,7 @@ const (
 	E00002                 // 編碼( hex )     錯誤
 	E00003                 // 編碼( rsa )     錯誤
 	E00004                 // 映射( reflect ) 錯誤
+	E00005                 // 編碼( proto )   錯誤
 )
 
 // DataCenter 資訊中心錯誤

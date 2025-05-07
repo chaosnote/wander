@@ -16,6 +16,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/chaosnote/wander/model/member"
+	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/model/subj"
 	"github.com/chaosnote/wander/utils"
 )
@@ -25,9 +26,9 @@ type GameImpl interface {
 	Start(logger utils.LogStore)
 	Close()
 
-	PlayerJoin(player member.Player, session *melody.Session)
-	PlayerMessageBinary(player member.Player, session *melody.Session, message []byte)
-	PlayerExit(player member.Player, session *melody.Session)
+	PlayerJoin(player member.Player)
+	PlayerMessageBinary(player member.Player, pack *message.GameMessage)
+	PlayerExit(player member.Player)
 }
 
 //-----------------------------------------------

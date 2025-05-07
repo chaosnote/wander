@@ -7,8 +7,8 @@ replace github.com/chaosnote/melody => ../../../melody
 replace github.com/chaosnote/wander => ../../server
 
 require (
-	github.com/chaosnote/wander v0.0.0-00010101000000-000000000000
 	github.com/chaosnote/melody v0.0.0-00010101000000-000000000000
+	github.com/chaosnote/wander v0.0.0-00010101000000-000000000000
 	github.com/go-resty/resty/v2 v2.16.5
 )
 
