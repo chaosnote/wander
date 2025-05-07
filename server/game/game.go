@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/chaosnote/melody"
 	"github.com/go-redis/redis"
@@ -38,13 +39,12 @@ type GameStore interface {
 
 //-----------------------------------------------
 
-type game_store struct {
+type store struct {
 	utils.LogStore
 
-	db_store      *sql.DB
-	nats_store    *nats.Conn
+	APIStore
+
 	mel_store     *melody.Melody
-	redis_store   *redis.Client
 	session_store map[string]*melody.Session
 
 	game_impl GameImpl
@@ -53,7 +53,7 @@ type game_store struct {
 //-----------------------------------------------
 
 func NewGameStore(provider GameImpl) GameStore {
-	return &game_store{
+	return &store{
 		game_impl:     provider,
 		session_store: map[string]*melody.Session{},
 	}
@@ -61,76 +61,101 @@ func NewGameStore(provider GameImpl) GameStore {
 
 //-----------------------------------------------
 
-func (gs *game_store) Start() {
+func (s *store) Start() {
 	flag.Parse()
 
-	var logger utils.LogStore
-	var log_path = filepath.Join(log_dir, fmt.Sprintf("game_%s", *GAME_ID))
-	switch *LOG_MODE {
-	case 0:
-		logger = utils.NewConsoleLogger(1)
-	case 2:
-		logger = utils.NewMixLogger(log_path, 2)
-	default:
-		logger = utils.NewFileLogger(log_path, 1)
-	}
-	gs.LogStore = logger
-
 	var e error
+	var di = utils.GetDI()
 
-	// mariadb
-	// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
-	cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
-	gs.Debug(utils.LogFields{"cmd": cmd})
-	gs.db_store, e = sql.Open("mysql", cmd)
-	if e != nil {
-		panic(e)
-	}
-	e = gs.db_store.Ping()
-	if e != nil {
-		panic(e)
-	}
-	// redis
-	d, _ := decimal.NewFromString(redis_db_idx)
-	gs.redis_store = redis.NewClient(&redis.Options{
-		Addr: redis_addr,
-		DB:   int(d.IntPart()),
+	di.Set(SERVICE_LOGGER, func() any {
+		var logger utils.LogStore
+		var log_path = filepath.Join(log_dir, fmt.Sprintf("game_%s", *GAME_ID))
+		switch *LOG_MODE {
+		case 0:
+			logger = utils.NewConsoleLogger(1)
+		case 2:
+			logger = utils.NewMixLogger(log_path, 2)
+		default:
+			logger = utils.NewFileLogger(log_path, 1)
+		}
+		return logger
 	})
-	e = gs.redis_store.Ping().Err()
-	if e != nil {
-		panic(e)
-	}
+
+	di.Set(SERVICE_MARIADB, func() any {
+		// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
+		cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
+		var db *sql.DB
+		db, e = sql.Open("mysql", cmd)
+		if e != nil {
+			panic(e)
+		}
+		e = db.Ping()
+		if e != nil {
+			panic(e)
+		}
+		db.SetMaxOpenConns(100)          // Limit to N open connections
+		db.SetMaxIdleConns(10)           // Keep up to N idle connections
+		db.SetConnMaxLifetime(time.Hour) // Reuse connections for at most N
+
+		return db
+	})
+
+	di.Set(SERVICE_NATS, func() any {
+		var conn *nats.Conn
+		conn, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
+		if e != nil {
+			panic(e)
+		}
+		conn.Subscribe(utils.Subject(*GAME_ID, subj.PLAYER_KICK, "*"), s.HandlePlayerKick)
+		return conn
+	})
+
+	di.Set(SERVICE_REDIS, func() any {
+		d, _ := decimal.NewFromString(redis_db_idx)
+		var conn *redis.Client
+		conn = redis.NewClient(&redis.Options{
+			Addr: redis_addr,
+			DB:   int(d.IntPart()),
+		})
+		e = conn.Ping().Err()
+		if e != nil {
+			panic(e)
+		}
+		return conn
+	})
+
+	s.LogStore = di.MustGet(SERVICE_LOGGER).(utils.LogStore)
+
+	s.APIStore = NewAPIStore()
+
+	//
+
 	// melody
-	gs.mel_store = melody.New()
-	gs.mel_store.HandleConnect(gs.handleConnect)
-	gs.mel_store.HandleDisconnect(gs.handleDisconnect)
-	gs.mel_store.HandleMessage(gs.handleMessage)
-	gs.mel_store.HandleMessageBinary(gs.handleMessageBinary)
-	// nats
-	gs.nats_store, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
-	if e != nil {
-		panic(e)
-	}
-	gs.nats_store.Subscribe(utils.Subject(*GAME_ID, subj.PLAYER_KICK, "*"), gs.handlePlayerKick)
+	s.mel_store = melody.New()
+	s.mel_store.HandleConnect(s.handleConnect)
+	s.mel_store.HandleDisconnect(s.handleDisconnect)
+	s.mel_store.HandleMessage(s.handleMessage)
+	s.mel_store.HandleMessageBinary(s.handleMessageBinary)
+
+	middleware := NewMiddlewareStore()
 	// router
 	router := mux.NewRouter()
-	router.Use(gs.loggingMiddleware)
+	router.Use(middleware.Logging)
 
 	// [TODO] 第三方驗證功能<Google...>
 	// router.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {})
 
 	sub := router.PathPrefix("/ws").Subrouter()
-	sub.HandleFunc(fmt.Sprintf("/%s/%s", group_id, *GAME_ID), gs.gameConnHandler).Queries("token", "{token:[a-zA-Z0-9]{128}}")
+	sub.HandleFunc(fmt.Sprintf("/%s/%s", group_id, *GAME_ID), s.HandleGameConn).Queries("token", "{token:[a-zA-Z0-9]{128}}")
 
 	e = router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		template, e := route.GetPathTemplate()
 		if e != nil {
 			return e
 		}
-		gs.Debug(utils.LogFields{"path": template})
+		s.Debug(utils.LogFields{"path": template})
 		return nil
 	})
-
 	if e != nil {
 		panic(e)
 	}
@@ -141,15 +166,15 @@ func (gs *game_store) Start() {
 			panic(e)
 		}
 	}()
-
-	gs.game_impl.Start(logger)
 }
 
-func (gs *game_store) Close() {
+func (gs *store) Close() {
 	gs.game_impl.Close()
 	gs.mel_store.Close()
-	gs.redis_store.Close()
-	gs.db_store.Close()
 
-	gs.Flush()
+	var di = utils.GetDI()
+	di.MustGet(SERVICE_MARIADB).(*sql.DB).Close()
+	di.MustGet(SERVICE_NATS).(*nats.Conn).Close()
+	di.MustGet(SERVICE_REDIS).(*redis.Client).Close()
+	di.MustGet(SERVICE_LOGGER).(utils.LogStore).Flush()
 }

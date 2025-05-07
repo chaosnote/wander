@@ -9,16 +9,16 @@ import (
 var player_mu sync.Mutex
 
 type PlayerStore interface {
-	AddPlayer(new_player *member.Player) (old_player *member.Player, add_suc bool)
-	RemovePlayer(uid string)
-	GetPlayer(uid string) (player *member.Player, ok bool)
+	PlayerAdd(new_player *member.Player) (old_player *member.Player, add_suc bool)
+	PlayerRemove(uid string)
+	PlayerGet(uid string) (player *member.Player, ok bool)
 }
 
 type player_store struct {
 	pool map[string]*member.Player
 }
 
-func (p *player_store) AddPlayer(new_player *member.Player) (old_player *member.Player, add_suc bool) {
+func (p *player_store) PlayerAdd(new_player *member.Player) (old_player *member.Player, add_suc bool) {
 	player_mu.Lock()
 	defer player_mu.Unlock()
 
@@ -33,14 +33,14 @@ func (p *player_store) AddPlayer(new_player *member.Player) (old_player *member.
 	return
 }
 
-func (p *player_store) RemovePlayer(uid string) {
+func (p *player_store) PlayerRemove(uid string) {
 	player_mu.Lock()
 	defer player_mu.Unlock()
 
 	delete(p.pool, uid)
 }
 
-func (p *player_store) GetPlayer(uid string) (player *member.Player, ok bool) {
+func (p *player_store) PlayerGet(uid string) (player *member.Player, ok bool) {
 	player_mu.Lock()
 	defer player_mu.Unlock()
 

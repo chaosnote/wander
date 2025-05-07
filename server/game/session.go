@@ -8,7 +8,7 @@ import (
 
 var session_mu sync.Mutex
 
-func (gs *game_store) addSession(uid string, session *melody.Session) {
+func (gs *store) addSession(uid string, session *melody.Session) {
 	session_mu.Lock()
 	defer session_mu.Unlock()
 	// [TODO]
@@ -18,7 +18,7 @@ func (gs *game_store) addSession(uid string, session *melody.Session) {
 	gs.session_store[uid] = session
 }
 
-func (gs *game_store) getSession(uid string) (session *melody.Session, ok bool) {
+func (gs *store) getSession(uid string) (session *melody.Session, ok bool) {
 	session_mu.Lock()
 	defer session_mu.Unlock()
 
@@ -26,7 +26,7 @@ func (gs *game_store) getSession(uid string) (session *melody.Session, ok bool) 
 	return
 }
 
-func (gs *game_store) rmSession(uid string) {
+func (gs *store) rmSession(uid string) {
 	session_mu.Lock()
 	defer session_mu.Unlock()
 

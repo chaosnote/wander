@@ -14,7 +14,16 @@ import (
 	"github.com/chaosnote/wander/utils"
 )
 
-func (gs *game_store) login(params member.ReqLogin) (output member.ResLogin, e error) {
+type APIStore interface {
+	Login(params member.ReqLogin) (output member.ResLogin, e error)
+	Logout(params map[string]any)
+}
+
+type api_store struct {
+	utils.LogStore
+}
+
+func (s *api_store) Login(params member.ReqLogin) (output member.ResLogin, e error) {
 	client := resty.New()
 	client.SetTimeout(5 * time.Second)
 
@@ -27,7 +36,7 @@ func (gs *game_store) login(params member.ReqLogin) (output member.ResLogin, e e
 
 	res, e := client.R().SetBody(params).Post(u.String())
 	if e != nil {
-		gs.Error(e)
+		s.Error(e)
 		e = errs.E10001.Error()
 		return
 	}
@@ -39,7 +48,7 @@ func (gs *game_store) login(params member.ReqLogin) (output member.ResLogin, e e
 
 	e = json.Unmarshal(res.Body(), &body)
 	if e != nil {
-		gs.Error(e)
+		s.Error(e)
 		e = errs.E00001.Error()
 		return
 	}
@@ -54,7 +63,7 @@ func (gs *game_store) login(params member.ReqLogin) (output member.ResLogin, e e
 	return
 }
 
-func (gs *game_store) logout(params map[string]any) {
+func (s *api_store) Logout(params map[string]any) {
 	client := resty.New()
 	client.SetTimeout(5 * time.Second)
 	client.SetRetryCount(5)
@@ -67,4 +76,12 @@ func (gs *game_store) logout(params map[string]any) {
 	}
 
 	client.R().SetBody(params).Post(u.String())
+}
+
+func NewAPIStore() APIStore {
+	var di = utils.GetDI()
+
+	return &api_store{
+		LogStore: di.MustGet(SERVICE_LOGGER).(utils.LogStore),
+	}
 }

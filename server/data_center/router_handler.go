@@ -14,7 +14,7 @@ import (
 	"github.com/chaosnote/wander/utils"
 )
 
-func (ds *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
+func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	const (
 		agent_id     = "57b4866772254df0b157e7966a7c12d2"
 		their_ugrant = "1"
@@ -33,7 +33,7 @@ func (ds *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var uid string
-	uid, e = ds.UpsertUser(agent_id, their_uname, their_ugrant, their_uid)
+	uid, e = s.UpsertUser(agent_id, their_uname, their_ugrant, their_uid)
 	if e != nil {
 		return
 	}
@@ -41,14 +41,14 @@ func (ds *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	var res = map[string]any{}
 	res["token"], e = utils.RSAEncode([]byte(uid))
 	if e != nil {
-		ds.Info(utils.LogFields{"error": e.Error()}) // 思考 DS.Error
+		s.Info(utils.LogFields{"error": e.Error()}) // 思考 DS.Error
 		e = errs.E12001.Error()
 		return
 	}
 
 	output, e := json.Marshal(api.HttpResponse{Code: api.HttpStatusOK, Content: res})
 	if e != nil {
-		ds.Error(e)
+		s.Error(e)
 		e = errs.E00001.Error()
 		return
 	}
@@ -99,7 +99,7 @@ func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 	}
 	player.UName = user.TheirUName
 
-	old_player, ok := s.AddPlayer(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
+	old_player, ok := s.PlayerAdd(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
 	if !ok {
 		e = errs.E13001.Error()
 		s.PlayerKick(old_player, e)
@@ -123,5 +123,5 @@ func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 func (s *store) HandleAPILogout(w http.ResponseWriter, r *http.Request) {
 	var body map[string]string
 	utils.HttpRequestJSONUnmarshal(r.Body, &body)
-	s.RemovePlayer(body[model.UID])
+	s.PlayerRemove(body[model.UID])
 }

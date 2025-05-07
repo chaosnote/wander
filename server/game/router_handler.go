@@ -1,9 +1,7 @@
 package game
 
 import (
-	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -13,24 +11,7 @@ import (
 	"github.com/chaosnote/wander/utils"
 )
 
-func (gs *game_store) loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
-		next.ServeHTTP(w, r)
-		endTime := time.Now()
-
-		duration := endTime.Sub(startTime)
-
-		gs.Info(utils.LogFields{
-			"method":    r.Method,
-			"path":      r.RequestURI,
-			"duration":  fmt.Sprintf("%v", duration),
-			"client_ip": utils.ParseIP(r),
-		})
-	})
-}
-
-func (gs *game_store) gameConnHandler(w http.ResponseWriter, r *http.Request) {
+func (s *store) HandleGameConn(w http.ResponseWriter, r *http.Request) {
 	var e error
 	player := member.Player{
 		ReqLogin: member.ReqLogin{
@@ -42,9 +23,9 @@ func (gs *game_store) gameConnHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if e != nil {
-			gs.Info(utils.LogFields{"error": e.Error()})
+			s.Info(utils.LogFields{"error": e.Error()})
 
-			conn, inrupt := gs.mel_store.Upgrader.Upgrade(w, r, w.Header())
+			conn, inrupt := s.mel_store.Upgrader.Upgrade(w, r, w.Header())
 			if inrupt != nil {
 				http.Error(w, "", http.StatusForbidden)
 				return
@@ -56,7 +37,7 @@ func (gs *game_store) gameConnHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	player.ResLogin, e = gs.login(player.ReqLogin)
+	player.ResLogin, e = s.Login(player.ReqLogin)
 	if e != nil {
 		return
 	}
@@ -64,9 +45,9 @@ func (gs *game_store) gameConnHandler(w http.ResponseWriter, r *http.Request) {
 	var keys = make(map[string]any)
 	keys[model.UID] = player
 
-	e = gs.mel_store.HandleRequestWithKeys(w, r, keys)
+	e = s.mel_store.HandleRequestWithKeys(w, r, keys)
 	if e != nil {
-		gs.Error(e)
+		s.Error(e)
 		e = errs.E20005.Error()
 		return
 	}

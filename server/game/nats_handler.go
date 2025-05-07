@@ -6,11 +6,11 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-func (gs *game_store) handlePlayerKick(msg *nats.Msg) {
+func (s *store) HandlePlayerKick(msg *nats.Msg) {
 	defer msg.Respond(nil)
 
 	var uid = strings.Split(msg.Subject, ".")[2]
-	session, ok := gs.getSession(uid)
+	session, ok := s.getSession(uid)
 	if !ok {
 		return
 	}

@@ -108,7 +108,6 @@ func (s *store) Start() {
 		s.Debug(utils.LogFields{"path": template})
 		return nil
 	})
-
 	if e != nil {
 		panic(e)
 	}
