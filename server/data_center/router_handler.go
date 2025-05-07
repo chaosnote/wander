@@ -19,6 +19,7 @@ func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	const (
 		agent_id     = "92aa258f95834a8bb35f74d5c21787d8"
 		their_ugrant = "1"
+		wallet       = 100000
 	)
 	var their_uname = utils.GenSerial("demo_")
 	tmp_uid, _ := decimal.NewFromString(strings.Split(utils.GenSerial("uid_"), "_")[1])
@@ -34,7 +35,7 @@ func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var uid string
-	uid, e = s.InsertUser(agent_id, their_uname, their_ugrant, their_uid)
+	uid, e = s.InsertUser(agent_id, their_uname, their_ugrant, their_uid, wallet)
 	if e != nil {
 		return
 	}
@@ -56,7 +57,7 @@ func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	w.Write(output)
 }
 
-func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
+func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	var e error
 
 	defer func() {
@@ -96,13 +97,25 @@ func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 	list := strings.Split(string(plaintext), "|")
 	player.AgentID = list[0]
 	player.UID = list[1]
-	s.Info(utils.LogFields{"agent_id": player.AgentID, "uid": player.UID})
 
 	user, e := s.FindUserByID(player.AgentID, player.UID) // 是否為已註冊的使用者
 	if e != nil {
 		return
 	}
 	player.UName = user.TheirUName
+	player.Wallet = user.Wallet
+
+	s.Info(utils.LogFields{
+		"agent_id": player.AgentID,
+		"uid":      player.UID,
+		"uname":    player.UName,
+		"wallet":   player.Wallet,
+	})
+
+	// 上鎖 -> 處理完畢
+	// 取點來源
+	// ∟ API
+	//  ∟ 異動記錄
 
 	old_player, ok := s.PlayerAdd(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
 	if !ok {
@@ -125,7 +138,7 @@ func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 	w.Write(output)
 }
 
-func (s *store) HandleAPILogout(w http.ResponseWriter, r *http.Request) {
+func (s *store) HandlePlayerLogout(w http.ResponseWriter, r *http.Request) {
 	var body map[string]string
 	utils.HttpRequestJSONUnmarshal(r.Body, &body)
 	s.PlayerRemove(body[model.UID])

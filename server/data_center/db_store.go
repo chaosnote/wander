@@ -12,7 +12,7 @@ import (
 
 type DBStore interface {
 	FindUserByID(agent_id, uid string) (user member.User, e error)
-	InsertUser(agent_id, their_uname, their_ugrant string, their_uid int64) (uid string, e error)
+	InsertUser(agent_id, their_uname, their_ugrant string, their_uid, wallet int64) (uid string, e error)
 	UpdateUserLastIPByID(agent_id, uid, client_ip string) (e error)
 }
 
@@ -31,6 +31,7 @@ func (s *db_store) FindUserByID(agent_id, uid string) (user member.User, e error
 		&user.TheirUID,
 		&user.TheirUName,
 		&user.TheirUGrant,
+		&user.Wallet,
 		&user.CreatedAt,
 		&user.ModifiedAt,
 	)
@@ -59,8 +60,8 @@ func (s *db_store) UpdateUserLastIPByID(agent_id, uid, client_ip string) (e erro
 	return
 }
 
-func (s *db_store) InsertUser(agent_id, their_uname, their_ugrant string, their_uid int64) (uid string, e error) {
-	query := fmt.Sprintf("INSERT INTO `agent_%s_user` (`TheirUID`, `TheirUName`, `TheirUGrant`, `CreatedAt`, `ModifiedAt`) VALUES (?, ?, ?, ?, ?);", agent_id)
+func (s *db_store) InsertUser(agent_id, their_uname, their_ugrant string, their_uid, wallet int64) (uid string, e error) {
+	query := fmt.Sprintf("INSERT INTO `agent_%s_user` (`TheirUID`, `TheirUName`, `TheirUGrant`, `Wallet`, `CreatedAt`, `ModifiedAt`) VALUES (?, ?, ?, ?, ?, ?);", agent_id)
 	create_at := time.Now().UTC().Format(time.DateTime)
 	_, e = s.db.Exec(
 		query,
@@ -68,6 +69,7 @@ func (s *db_store) InsertUser(agent_id, their_uname, their_ugrant string, their_
 		their_uid,
 		their_uname,
 		their_ugrant,
+		wallet,
 		create_at,
 		create_at,
 	)

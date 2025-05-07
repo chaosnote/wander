@@ -92,13 +92,16 @@ func (s *store) Start() {
 	router := mux.NewRouter()
 	router.Use(middleware.Logging)
 
-	sub := router.PathPrefix("/guest").Subrouter()
+	// 儲值點 (未處理)
+	sub := router.PathPrefix("/api").Subrouter()
+
+	sub = router.PathPrefix("/guest").Subrouter()
 	sub.Use(middleware.Guest)
 	sub.HandleFunc(`/new`, s.HandleGuestNew).Methods(http.MethodGet)
 
 	sub = router.PathPrefix("/player").Subrouter()
-	sub.HandleFunc(`/login`, s.HandleAPILogin).Methods(http.MethodPost)
-	sub.HandleFunc(`/logout`, s.HandleAPILogout).Methods(http.MethodPost)
+	sub.HandleFunc(`/login`, s.HandlePlayerLogin).Methods(http.MethodPost)
+	sub.HandleFunc(`/logout`, s.HandlePlayerLogout).Methods(http.MethodPost)
 
 	e = router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		template, e := route.GetPathTemplate()
