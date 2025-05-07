@@ -10,7 +10,7 @@ func (s *store) HandlePlayerKick(msg *nats.Msg) {
 	defer msg.Respond(nil)
 
 	var uid = strings.Split(msg.Subject, ".")[2]
-	session, ok := s.getSession(uid)
+	session, ok := s.SessionGet(uid)
 	if !ok {
 		return
 	}

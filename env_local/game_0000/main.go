@@ -12,8 +12,9 @@ import (
 )
 
 func main() {
-	server := game.NewGameStore(&Game0000{})
-	server.Start()
+	base := game.NewGameStore()
+	base.RegisterHandler(&Game0000{})
+	base.Start()
 
 	log.Println("server starting")
 
@@ -25,7 +26,7 @@ func main() {
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	server.Close()
+	base.Close()
 
 	log.Println("server stop")
 }

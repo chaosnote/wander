@@ -22,7 +22,7 @@ import (
 
 // 遊戲開發者實做
 type GameImpl interface {
-	Start(utils.LogStore)
+	Start(logger utils.LogStore)
 	Close()
 
 	PlayerJoin(player member.Player, session *melody.Session)
@@ -32,9 +32,12 @@ type GameImpl interface {
 
 //-----------------------------------------------
 
+// 底層開放功能
 type GameStore interface {
-	Start()
-	Close()
+	Start() // 遊戲啟動、此階段會呼叫開發者的對應函式
+	Close() // 遊戲關閉、此階段會呼叫開發者的對應函式
+
+	RegisterHandler(provider GameImpl) // 註冊開發者實作函式
 }
 
 //-----------------------------------------------
@@ -43,26 +46,22 @@ type store struct {
 	utils.LogStore
 
 	APIStore
-
-	mel_store     *melody.Melody
-	session_store map[string]*melody.Session
+	SessionStore
 
 	game_impl GameImpl
+	mel_store *melody.Melody
+}
+
+func (s *store) RegisterHandler(provider GameImpl) {
+	s.game_impl = provider
 }
 
 //-----------------------------------------------
 
-func NewGameStore(provider GameImpl) GameStore {
-	return &store{
-		game_impl:     provider,
-		session_store: map[string]*melody.Session{},
-	}
-}
-
-//-----------------------------------------------
-
-func (s *store) Start() {
+func NewGameStore() GameStore {
 	flag.Parse()
+
+	s := &store{}
 
 	var e error
 	var di = utils.GetDI()
@@ -127,11 +126,18 @@ func (s *store) Start() {
 	s.LogStore = di.MustGet(SERVICE_LOGGER).(utils.LogStore)
 
 	s.APIStore = NewAPIStore()
+	s.SessionStore = NewSessionStore()
 
-	//
-
-	// melody
 	s.mel_store = melody.New()
+
+	return s
+}
+
+//-----------------------------------------------
+
+func (s *store) Start() {
+	var e error
+
 	s.mel_store.HandleConnect(s.handleConnect)
 	s.mel_store.HandleDisconnect(s.handleDisconnect)
 	s.mel_store.HandleMessage(s.handleMessage)
@@ -166,11 +172,14 @@ func (s *store) Start() {
 			panic(e)
 		}
 	}()
+
+	var di = utils.GetDI()
+	s.game_impl.Start(di.MustGet(SERVICE_LOGGER).(utils.LogStore))
 }
 
-func (gs *store) Close() {
-	gs.game_impl.Close()
-	gs.mel_store.Close()
+func (s *store) Close() {
+	s.game_impl.Close()
+	s.mel_store.Close()
 
 	var di = utils.GetDI()
 	di.MustGet(SERVICE_MARIADB).(*sql.DB).Close()
