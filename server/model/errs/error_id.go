@@ -38,9 +38,9 @@ const (
 
 const (
 	E12000 error_id = iota + 12000 //
-	E12001                         // Call `upsert_user` 過程出錯
-	E12002                         // Select `user_list` 過程出錯
-	E12003                         // UPDATE `user_list` 過程出錯
+	E12001                         // Insert `user` 過程出錯
+	E12002                         // Select `user` 過程出錯
+	E12003                         // UPDATE `user` 過程出錯
 )
 
 const (

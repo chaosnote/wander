@@ -7,6 +7,7 @@ type ReqLogin struct {
 }
 
 type ResLogin struct {
-	UID   string `json:"uid"`
-	UName string `json:"uname"`
+	AgentID string `json:"agent_id"`
+	UID     string `json:"uid"`
+	UName   string `json:"uname"`
 }

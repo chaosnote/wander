@@ -2,6 +2,7 @@ package datacenter
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -16,7 +17,7 @@ import (
 
 func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	const (
-		agent_id     = "57b4866772254df0b157e7966a7c12d2"
+		agent_id     = "92aa258f95834a8bb35f74d5c21787d8"
 		their_ugrant = "1"
 	)
 	var their_uname = utils.GenSerial("demo_")
@@ -33,15 +34,15 @@ func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var uid string
-	uid, e = s.UpsertUser(agent_id, their_uname, their_ugrant, their_uid)
+	uid, e = s.InsertUser(agent_id, their_uname, their_ugrant, their_uid)
 	if e != nil {
 		return
 	}
 
 	var res = map[string]any{}
-	res["token"], e = utils.RSAEncode([]byte(uid))
+	res["token"], e = utils.RSAEncode([]byte(fmt.Sprintf("%s|%s", agent_id, uid)))
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()}) // 思考 DS.Error
+		s.Info(utils.LogFields{"error": e.Error()})
 		e = errs.E12001.Error()
 		return
 	}
@@ -92,8 +93,12 @@ func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	player.UID = string(plaintext)
-	user, e := s.FindUserByID(player.UID) // 是否為已註冊的使用者
+	list := strings.Split(string(plaintext), "|")
+	player.AgentID = list[0]
+	player.UID = list[1]
+	s.Info(utils.LogFields{"agent_id": player.AgentID, "uid": player.UID})
+
+	user, e := s.FindUserByID(player.AgentID, player.UID) // 是否為已註冊的使用者
 	if e != nil {
 		return
 	}
@@ -106,7 +111,7 @@ func (s *store) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	e = s.UpdateUserLastIPByID(player.UID, player.IP)
+	e = s.UpdateUserLastIPByID(player.AgentID, player.UID, player.IP)
 	if e != nil {
 		return
 	}

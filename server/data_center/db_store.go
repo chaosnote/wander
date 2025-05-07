@@ -2,6 +2,7 @@ package datacenter
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/chaosnote/wander/model/errs"
@@ -10,9 +11,9 @@ import (
 )
 
 type DBStore interface {
-	FindUserByID(uid string) (user member.User, e error)
-	UpdateUserLastIPByID(uid, client_ip string) (e error)
-	UpsertUser(agent_id, their_uname, their_ugrant string, their_uid int64) (uid string, e error)
+	FindUserByID(agent_id, uid string) (user member.User, e error)
+	InsertUser(agent_id, their_uname, their_ugrant string, their_uid int64) (uid string, e error)
+	UpdateUserLastIPByID(agent_id, uid, client_ip string) (e error)
 }
 
 type db_store struct {
@@ -21,13 +22,12 @@ type db_store struct {
 	db *sql.DB
 }
 
-func (s *db_store) FindUserByID(uid string) (user member.User, e error) {
-	query := "SELECT * FROM `user_list` WHERE `ID` = ?"
+func (s *db_store) FindUserByID(agent_id, uid string) (user member.User, e error) {
+	query := fmt.Sprintf("SELECT * FROM `agent_%s_user` WHERE `ID` = ?", agent_id)
 	row := s.db.QueryRow(query, uid)
 	e = row.Scan(
 		&user.ID,
 		&user.LastIP,
-		&user.AgentID,
 		&user.TheirUID,
 		&user.TheirUName,
 		&user.TheirUGrant,
@@ -42,11 +42,13 @@ func (s *db_store) FindUserByID(uid string) (user member.User, e error) {
 	return
 }
 
-func (s *db_store) UpdateUserLastIPByID(uid, client_ip string) (e error) {
-	query := "UPDATE `user_list` SET `LastIP` = ? WHERE `ID` = ? "
+func (s *db_store) UpdateUserLastIPByID(agent_id, uid, client_ip string) (e error) {
+	query := fmt.Sprintf("UPDATE `agent_%s_user` SET `LastIP` = ?, `ModifiedAt` = ? WHERE `ID` = ? ", agent_id)
 	_, e = s.db.Exec(
 		query,
+
 		client_ip,
+		time.Now().UTC().Format(time.DateTime),
 		uid,
 	)
 	if e != nil {
@@ -57,8 +59,26 @@ func (s *db_store) UpdateUserLastIPByID(uid, client_ip string) (e error) {
 	return
 }
 
-func (s *db_store) UpsertUser(agent_id, their_uname, their_ugrant string, their_uid int64) (uid string, e error) {
-	row := s.db.QueryRow("CALL upsert_user(?, ?, ?, ?, ?) ;", agent_id, their_uid, their_uname, their_ugrant, time.Now().UTC().Format(time.DateTime))
+func (s *db_store) InsertUser(agent_id, their_uname, their_ugrant string, their_uid int64) (uid string, e error) {
+	query := fmt.Sprintf("INSERT INTO `agent_%s_user` (`TheirUID`, `TheirUName`, `TheirUGrant`, `CreatedAt`, `ModifiedAt`) VALUES (?, ?, ?, ?, ?);", agent_id)
+	create_at := time.Now().UTC().Format(time.DateTime)
+	_, e = s.db.Exec(
+		query,
+
+		their_uid,
+		their_uname,
+		their_ugrant,
+		create_at,
+		create_at,
+	)
+	if e != nil {
+		s.Info(utils.LogFields{"error": e.Error()})
+		e = errs.E12001.Error()
+		return
+	}
+
+	query = fmt.Sprintf("SELECT ID FROM `agent_%s_user` WHERE TheirUID = ? ;", agent_id)
+	row := s.db.QueryRow(query, their_uid)
 	e = row.Scan(&uid)
 	if e != nil {
 		s.Info(utils.LogFields{"error": e.Error()})

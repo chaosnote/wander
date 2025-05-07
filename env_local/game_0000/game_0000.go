@@ -30,6 +30,8 @@ func (g *Game0000) Close() {
 }
 
 func (g *Game0000) PlayerJoin(player member.Player) {
+	g.Debug(utils.LogFields{"join": player})
+
 	// 玩家上線
 	// 玩家基礎資訊
 	content := &protobuf.Player{}
