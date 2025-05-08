@@ -144,6 +144,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	player.UName = user.TheirUName
 	player.Wallet = user.Wallet
+	player.TheirUID = user.TheirUID
 
 	if !s.BlackNotExisted(player.UID) {
 		e = errs.E14001.Error()

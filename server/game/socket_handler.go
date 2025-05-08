@@ -16,6 +16,13 @@ func (s *store) handleConnect(session *melody.Session) {
 	s.Debug(utils.LogFields{"connect_uid": player.UID})
 	session.Set(model.KEY_UID, player)
 	s.SessionAdd(player.UID, session)
+
+	s.Takeout(WalletSetting{
+		Player:    player,
+		Diff:      int(player.Wallet),
+		AfterDiff: int(player.Wallet),
+	})
+
 	s.game_impl.PlayerJoin(player)
 }
 
@@ -24,6 +31,14 @@ func (s *store) handleDisconnect(session *melody.Session) {
 	s.Debug(utils.LogFields{"disconnect_uid": player.UID})
 	s.game_impl.PlayerExit(player)
 	s.SessionRemove(player.UID)
+
+	s.Putin(WalletSetting{
+		Player:     player,
+		BeforeDiff: int(player.Wallet),
+		Diff:       0 - int(player.Wallet),
+		AfterDiff:  0,
+	})
+
 	s.Logout(map[string]any{
 		model.KEY_UID:    player.UID,
 		model.KEY_WALLET: player.Wallet,

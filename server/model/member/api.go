@@ -7,8 +7,9 @@ type ReqLogin struct {
 }
 
 type ResLogin struct {
-	AgentID string  `json:"agent_id"`
-	UID     string  `json:"uid"`
-	UName   string  `json:"uname"`
-	Wallet  float64 `json:"wallet"` // 玩家當前
+	AgentID  string  `json:"agent_id"`
+	UID      string  `json:"uid"`
+	TheirUID string  `json:"their_uid"`
+	UName    string  `json:"uname"`
+	Wallet   float64 `json:"wallet"` // 玩家當前
 }

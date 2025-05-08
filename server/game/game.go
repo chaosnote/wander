@@ -52,6 +52,7 @@ type store struct {
 
 	APIStore
 	SessionStore
+	WalletStore
 
 	game_impl GameImpl
 	mel_store *melody.Melody
@@ -163,6 +164,7 @@ func NewGameStore() GameStore {
 
 	s.APIStore = NewAPIStore()
 	s.SessionStore = NewSessionStore()
+	s.WalletStore = NewWalletStore()
 
 	s.mel_store = melody.New()
 

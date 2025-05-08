@@ -48,7 +48,7 @@ func (s *store) HandleGameConn(w http.ResponseWriter, r *http.Request) {
 	e = s.mel_store.HandleRequestWithKeys(w, r, keys)
 	if e != nil {
 		s.Error(e)
-		e = errs.E20005.Error()
+		e = errs.E30006.Error()
 		return
 	}
 
