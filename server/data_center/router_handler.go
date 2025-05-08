@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -13,6 +15,16 @@ import (
 	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/utils"
+)
+
+type uid_queue struct {
+	mu    sync.Mutex
+	count int
+}
+
+var (
+	uid_mu    sync.Mutex
+	uid_store = make(map[string]*uid_queue)
 )
 
 func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
@@ -98,13 +110,6 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	player.AgentID = list[0]
 	player.UID = list[1]
 
-	user, e := s.FindUserByID(player.AgentID, player.UID) // 是否為已註冊的使用者
-	if e != nil {
-		return
-	}
-	player.UName = user.TheirUName
-	player.Wallet = user.Wallet
-
 	s.Info(utils.LogFields{
 		"agent_id": player.AgentID,
 		"uid":      player.UID,
@@ -112,12 +117,40 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		"wallet":   player.Wallet,
 	})
 
-	// 上鎖 -> 處理完畢
-	// 取點來源
-	// ∟ API
-	//  ∟ 異動記錄
+	uid_mu.Lock()
+	if _, ok := uid_store[player.UID]; ok {
+		uid_store[player.UID].count++
+	} else {
+		uid_store[player.UID] = &uid_queue{count: 1}
+	}
+	queue := uid_store[player.UID]
+	uid_mu.Unlock()
 
-	old_player, ok := s.PlayerAdd(player) // old_player {true:玩家增加成功:false:玩家增加失敗}
+	queue.mu.Lock()
+	defer func() {
+		queue.mu.Unlock()
+		uid_mu.Lock()
+		uid_store[player.UID].count--
+		if uid_store[player.UID].count <= 0 {
+			delete(uid_store, player.UID)
+		}
+		uid_mu.Unlock()
+	}()
+
+	s.Debug(utils.LogFields{
+		"lock": player.UID,
+	})
+	time.Sleep(time.Second)
+
+	user, e := s.FindUserByID(player.AgentID, player.UID) // 是否為已註冊的使用者
+	if e != nil {
+		return
+	}
+	player.UName = user.TheirUName
+	player.Wallet = user.Wallet
+
+	// old_player {true:玩家增加成功:false:玩家增加失敗}
+	old_player, ok := s.PlayerAdd(player)
 	if !ok {
 		e = errs.E13001.Error()
 		s.PlayerKick(old_player, e)

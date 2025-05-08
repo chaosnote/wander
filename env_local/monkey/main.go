@@ -21,6 +21,8 @@ import (
 	"github.com/chaosnote/wander/utils"
 )
 
+// go run . -step 2
+
 type CustomHTTPResponse struct {
 	api.HttpResponse
 	Content map[string]string
@@ -33,6 +35,7 @@ var (
 
 var (
 	token = flag.String("token", "", "token")
+	step  = flag.Int("step", 1, "運行多少機器人")
 )
 
 func getToken() (token string) {
@@ -96,7 +99,6 @@ func main() {
 	})
 	monkey.HandleDisconnect(func(s *melody.Session) {
 		logger.Debug(utils.LogFields{"tip": "disconnect"})
-		os.Exit(0)
 	})
 	monkey.HandleMessage(func(s *melody.Session, msg []byte) {
 		logger.Debug(utils.LogFields{"msg": string(msg)})
@@ -117,7 +119,7 @@ func main() {
 		logger.Debug(utils.LogFields{"name": content.GetName()})
 	})
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < *step; i++ {
 		go dial(tmp_token)
 	}
 
