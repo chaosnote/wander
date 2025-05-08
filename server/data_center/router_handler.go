@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -113,8 +112,6 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	s.Info(utils.LogFields{
 		"agent_id": player.AgentID,
 		"uid":      player.UID,
-		"uname":    player.UName,
-		"wallet":   player.Wallet,
 	})
 
 	uid_mu.Lock()
@@ -136,11 +133,6 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		uid_mu.Unlock()
 	}()
-
-	s.Debug(utils.LogFields{
-		"lock": player.UID,
-	})
-	time.Sleep(time.Second)
 
 	user, e := s.FindUserByID(player.AgentID, player.UID) // 是否為已註冊的使用者
 	if e != nil {
