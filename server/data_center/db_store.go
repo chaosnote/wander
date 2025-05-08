@@ -96,7 +96,7 @@ func NewDBStore() DBStore {
 	var di = utils.GetDI()
 
 	return &db_store{
-		LogStore: di.MustGet(SERVICE_LOGGER).(utils.LogStore),
-		db:       di.MustGet(SERVICE_MARIADB).(*sql.DB),
+		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
+		db:       di.MustGet(utils.SERVICE_MARIADB).(*sql.DB),
 	}
 }

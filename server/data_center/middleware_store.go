@@ -61,6 +61,6 @@ func NewMiddlewareStore() MiddlewareStore {
 	var di = utils.GetDI()
 
 	return &middleware_store{
-		LogStore: di.MustGet(SERVICE_LOGGER).(utils.LogStore),
+		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
 	}
 }

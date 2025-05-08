@@ -40,7 +40,7 @@ func NewNatsStore() NatsStore {
 	var di = utils.GetDI()
 
 	return &nats_store{
-		LogStore: di.MustGet(SERVICE_LOGGER).(utils.LogStore),
-		conn:     di.MustGet(SERVICE_NATS).(*nats.Conn),
+		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
+		conn:     di.MustGet(utils.SERVICE_NATS).(*nats.Conn),
 	}
 }

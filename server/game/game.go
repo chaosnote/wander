@@ -102,7 +102,7 @@ func NewGameStore() GameStore {
 	var e error
 	var di = utils.GetDI()
 
-	di.Set(SERVICE_LOGGER, func() any {
+	di.Set(utils.SERVICE_LOGGER, func() any {
 		var logger utils.LogStore
 		var log_path = filepath.Join(log_dir, fmt.Sprintf("game_%s", *GAME_ID))
 		switch *LOG_MODE {
@@ -116,7 +116,7 @@ func NewGameStore() GameStore {
 		return logger
 	})
 
-	di.Set(SERVICE_MARIADB, func() any {
+	di.Set(utils.SERVICE_MARIADB, func() any {
 		// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
 		cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
 		var db *sql.DB
@@ -135,7 +135,7 @@ func NewGameStore() GameStore {
 		return db
 	})
 
-	di.Set(SERVICE_NATS, func() any {
+	di.Set(utils.SERVICE_NATS, func() any {
 		var conn *nats.Conn
 		conn, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
 		if e != nil {
@@ -145,7 +145,7 @@ func NewGameStore() GameStore {
 		return conn
 	})
 
-	di.Set(SERVICE_REDIS, func() any {
+	di.Set(utils.SERVICE_REDIS, func() any {
 		d, _ := decimal.NewFromString(redis_db_idx)
 		var conn *redis.Client
 		conn = redis.NewClient(&redis.Options{
@@ -159,7 +159,7 @@ func NewGameStore() GameStore {
 		return conn
 	})
 
-	s.LogStore = di.MustGet(SERVICE_LOGGER).(utils.LogStore)
+	s.LogStore = di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore)
 
 	s.APIStore = NewAPIStore()
 	s.SessionStore = NewSessionStore()
@@ -210,7 +210,7 @@ func (s *store) Start() {
 	}()
 
 	var di = utils.GetDI()
-	s.game_impl.Start(di.MustGet(SERVICE_LOGGER).(utils.LogStore))
+	s.game_impl.Start(di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore))
 }
 
 func (s *store) Close() {
@@ -218,8 +218,8 @@ func (s *store) Close() {
 	s.mel_store.Close()
 
 	var di = utils.GetDI()
-	di.MustGet(SERVICE_MARIADB).(*sql.DB).Close()
-	di.MustGet(SERVICE_NATS).(*nats.Conn).Close()
-	di.MustGet(SERVICE_REDIS).(*redis.Client).Close()
-	di.MustGet(SERVICE_LOGGER).(utils.LogStore).Flush()
+	di.MustGet(utils.SERVICE_MARIADB).(*sql.DB).Close()
+	di.MustGet(utils.SERVICE_NATS).(*nats.Conn).Close()
+	di.MustGet(utils.SERVICE_REDIS).(*redis.Client).Close()
+	di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore).Flush()
 }

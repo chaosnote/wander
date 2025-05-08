@@ -40,7 +40,7 @@ func (s *store) Start() {
 	var di = utils.GetDI()
 	var e error
 
-	di.Set(SERVICE_LOGGER, func() any {
+	di.Set(utils.SERVICE_LOGGER, func() any {
 		var logger utils.LogStore
 		var log_path = filepath.Join("./logs/data_center")
 		switch *LOG_MODE {
@@ -54,7 +54,7 @@ func (s *store) Start() {
 		return logger
 	})
 
-	di.Set(SERVICE_MARIADB, func() any {
+	di.Set(utils.SERVICE_MARIADB, func() any {
 		// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
 		cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
 		var db *sql.DB
@@ -73,7 +73,7 @@ func (s *store) Start() {
 		return db
 	})
 
-	di.Set(SERVICE_NATS, func() any {
+	di.Set(utils.SERVICE_NATS, func() any {
 		var conn *nats.Conn
 		conn, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
 		if e != nil {
@@ -82,7 +82,7 @@ func (s *store) Start() {
 		return conn
 	})
 
-	s.LogStore = di.MustGet(SERVICE_LOGGER).(utils.LogStore)
+	s.LogStore = di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore)
 	s.DBStore = NewDBStore()
 	s.NatsStore = NewNatsStore()
 	s.PlayerStore = NewPlayerStore()
@@ -92,7 +92,7 @@ func (s *store) Start() {
 	router := mux.NewRouter()
 	router.Use(middleware.Logging)
 
-	// 儲值點 (未處理)
+	// [TODO]儲值 (未處理)
 	sub := router.PathPrefix("/api").Subrouter()
 
 	sub = router.PathPrefix("/guest").Subrouter()
@@ -126,9 +126,9 @@ func (s *store) Start() {
 
 func (ds *store) Close() {
 	var di = utils.GetDI()
-	di.MustGet(SERVICE_MARIADB).(*sql.DB).Close()
-	di.MustGet(SERVICE_NATS).(*nats.Conn).Close()
-	di.MustGet(SERVICE_LOGGER).(utils.LogStore).Flush()
+	di.MustGet(utils.SERVICE_MARIADB).(*sql.DB).Close()
+	di.MustGet(utils.SERVICE_NATS).(*nats.Conn).Close()
+	di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore).Flush()
 }
 
 //-----------------------------------------------

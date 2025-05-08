@@ -82,6 +82,6 @@ func NewAPIStore() APIStore {
 	var di = utils.GetDI()
 
 	return &api_store{
-		LogStore: di.MustGet(SERVICE_LOGGER).(utils.LogStore),
+		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
 	}
 }
