@@ -26,6 +26,7 @@ func (p *player_store) PlayerAdd(new_player *member.Player) (old_player *member.
 	old_player, ok = p.pool[new_player.UID]
 	if ok {
 		add_suc = false
+		delete(p.pool, old_player.UID)
 		return
 	}
 	add_suc = true
