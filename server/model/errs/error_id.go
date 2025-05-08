@@ -27,6 +27,7 @@ const (
 // 11000 NatsIO     錯誤起點
 // 12000 DB         錯誤起點
 // 13000 Model      錯誤起點
+// 14000 Redis      錯誤起點
 
 const (
 	E10000 error_id = iota + 10000 //
@@ -34,6 +35,7 @@ const (
 	E10002                         // WEB 服務回應( 非 OK )
 	E10003                         // Http Request <參數/格式>錯誤
 	E10004                         // Http POST Body 轉換失敗
+	E10005                         // Http Response 過程出錯
 )
 
 const (
@@ -46,6 +48,11 @@ const (
 const (
 	E13000 error_id = iota + 13000 //
 	E13001                         // 已有玩家記錄(重複連線)
+)
+
+const (
+	E14000 error_id = iota + 14000 //
+	E14001                         // 玩家短期內重複連線
 )
 
 //

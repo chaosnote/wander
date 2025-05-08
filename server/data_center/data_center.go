@@ -8,9 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/go-redis/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/nats-io/nats.go"
+	"github.com/shopspring/decimal"
 
 	"github.com/chaosnote/wander/utils"
 )
@@ -27,6 +29,7 @@ type store struct {
 
 	DBStore
 	NatsStore
+	RedisStore
 	PlayerStore
 }
 
@@ -82,9 +85,24 @@ func (s *store) Start() {
 		return conn
 	})
 
+	di.Set(utils.SERVICE_REDIS, func() any {
+		d, _ := decimal.NewFromString(redis_db_idx)
+		var conn *redis.Client
+		conn = redis.NewClient(&redis.Options{
+			Addr: redis_addr,
+			DB:   int(d.IntPart()),
+		})
+		e = conn.Ping().Err()
+		if e != nil {
+			panic(e)
+		}
+		return conn
+	})
+
 	s.LogStore = di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore)
 	s.DBStore = NewDBStore()
 	s.NatsStore = NewNatsStore()
+	s.RedisStore = NewRedisStore()
 	s.PlayerStore = NewPlayerStore()
 
 	middleware := NewMiddlewareStore()

@@ -43,7 +43,7 @@ func (s *store) HandleGameConn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var keys = make(map[string]any)
-	keys[model.UID] = player
+	keys[model.KEY_UID] = player
 
 	e = s.mel_store.HandleRequestWithKeys(w, r, keys)
 	if e != nil {

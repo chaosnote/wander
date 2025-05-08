@@ -14,4 +14,7 @@ var (
 	db_name = os.Getenv("DB_NAME")
 
 	nats_addr = os.Getenv("NATS_ADDR")
+
+	redis_addr   = os.Getenv("REDIS_ADDR")
+	redis_db_idx = os.Getenv("REDIS_DB_INDEX")
 )

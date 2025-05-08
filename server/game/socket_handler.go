@@ -12,22 +12,26 @@ import (
 )
 
 func (s *store) handleConnect(session *melody.Session) {
-	player := session.MustGet(model.UID).(member.Player)
-	session.Set(model.UID, player)
-	s.Debug(utils.LogFields{"join_uid": player.UID})
+	player := session.MustGet(model.KEY_UID).(member.Player)
+	s.Debug(utils.LogFields{"connect_uid": player.UID})
+	session.Set(model.KEY_UID, player)
 	s.SessionAdd(player.UID, session)
 	s.game_impl.PlayerJoin(player)
 }
 
 func (s *store) handleDisconnect(session *melody.Session) {
-	player := session.MustGet(model.UID).(member.Player)
+	player := session.MustGet(model.KEY_UID).(member.Player)
+	s.Debug(utils.LogFields{"disconnect_uid": player.UID})
 	s.game_impl.PlayerExit(player)
 	s.SessionRemove(player.UID)
-	s.Logout(map[string]any{model.UID: player.UID})
+	s.Logout(map[string]any{
+		model.KEY_UID:    player.UID,
+		model.KEY_WALLET: player.Wallet,
+	})
 }
 
 func (s *store) handleMessageBinary(session *melody.Session, source []byte) {
-	content, exists := session.Get(model.UID)
+	content, exists := session.Get(model.KEY_UID)
 	if !exists {
 		return
 	}

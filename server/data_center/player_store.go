@@ -10,7 +10,7 @@ var player_mu sync.Mutex
 
 type PlayerStore interface {
 	PlayerAdd(new_player *member.Player) (old_player *member.Player, add_suc bool)
-	PlayerRemove(uid string)
+	PlayerRemove(uid string) (player *member.Player, ok bool)
 	PlayerGet(uid string) (player *member.Player, ok bool)
 }
 
@@ -26,7 +26,6 @@ func (p *player_store) PlayerAdd(new_player *member.Player) (old_player *member.
 	old_player, ok = p.pool[new_player.UID]
 	if ok {
 		add_suc = false
-		delete(p.pool, old_player.UID)
 		return
 	}
 	add_suc = true
@@ -34,11 +33,16 @@ func (p *player_store) PlayerAdd(new_player *member.Player) (old_player *member.
 	return
 }
 
-func (p *player_store) PlayerRemove(uid string) {
+func (p *player_store) PlayerRemove(uid string) (player *member.Player, ok bool) {
 	player_mu.Lock()
 	defer player_mu.Unlock()
 
+	player, ok = p.pool[uid]
+	if !ok {
+		return
+	}
 	delete(p.pool, uid)
+	return
 }
 
 func (p *player_store) PlayerGet(uid string) (player *member.Player, ok bool) {

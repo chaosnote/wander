@@ -2,10 +2,12 @@ package datacenter
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -72,7 +74,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	var e error
 
 	defer func() {
-		if e != nil {
+		if e != nil && !errors.Is(e, errs.E10005.Error()) {
 			output, _ := json.Marshal(api.HttpResponse{Code: e.Error()})
 			w.Write(output)
 		}
@@ -134,25 +136,45 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		uid_mu.Unlock()
 	}()
 
-	user, e := s.FindUserByID(player.AgentID, player.UID) // 是否為已註冊的使用者
+	// 過程中請求端已超時(5 秒)、此時後端仍在運行、則後端資訊與狀態不符
+	// 是否為已註冊的使用者
+	user, e := s.FindUserByID(player.AgentID, player.UID)
 	if e != nil {
 		return
 	}
 	player.UName = user.TheirUName
 	player.Wallet = user.Wallet
 
+	if !s.BlackNotExisted(player.UID) {
+		e = errs.E14001.Error()
+		return
+	}
+
+	// 已註冊的使用者，但已有連線
 	// old_player {true:玩家增加成功:false:玩家增加失敗}
 	old_player, ok := s.PlayerAdd(player)
 	if !ok {
 		e = errs.E13001.Error()
+		s.BlackAdd(player.UID, player.Token)
 		s.PlayerKick(old_player, e)
 		return
 	}
 
-	e = s.UpdateUserLastIPByID(player.AgentID, player.UID, player.IP)
+	e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, 0)
 	if e != nil {
 		return
 	}
+	defer func() {
+		if e != nil {
+			e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, player.Wallet)
+		}
+		if e != nil {
+			s.Error(e)
+			return
+		}
+	}()
+
+	time.Sleep(1 * time.Second) // API 請求模擬(尚未處理)
 
 	output, e := json.Marshal(api.HttpResponse{Code: api.HttpStatusOK, Content: player.ResLogin})
 	if e != nil {
@@ -160,11 +182,29 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		e = errs.E00001.Error()
 		return
 	}
-	w.Write(output)
+
+	_, e = w.Write(output)
+	if e != nil {
+		s.Error(e)
+		e = errs.E10005.Error()
+	}
 }
 
 func (s *store) HandlePlayerLogout(w http.ResponseWriter, r *http.Request) {
-	var body map[string]string
-	utils.HttpRequestJSONUnmarshal(r.Body, &body)
-	s.PlayerRemove(body[model.UID])
+	var body map[string]any
+	e := utils.HttpRequestJSONUnmarshal(r.Body, &body)
+	if e != nil {
+		s.Error(e)
+		return
+	}
+
+	uid := body[model.KEY_UID].(string)
+	player, ok := s.PlayerRemove(uid)
+	if !ok {
+		s.Info(utils.LogFields{"error": fmt.Sprintf("lost uid(%s)", uid)})
+		return
+	}
+
+	player.Wallet = body[model.KEY_WALLET].(float64)
+	e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, player.Wallet)
 }

@@ -13,7 +13,7 @@ import (
 type DBStore interface {
 	FindUserByID(agent_id, uid string) (user member.User, e error)
 	InsertUser(agent_id, their_uname, their_ugrant string, their_uid, wallet int64) (uid string, e error)
-	UpdateUserLastIPByID(agent_id, uid, client_ip string) (e error)
+	UpdateUserIPAndWallet(agent_id, uid, client_ip string, wallet float64) (e error)
 }
 
 type db_store struct {
@@ -43,12 +43,13 @@ func (s *db_store) FindUserByID(agent_id, uid string) (user member.User, e error
 	return
 }
 
-func (s *db_store) UpdateUserLastIPByID(agent_id, uid, client_ip string) (e error) {
-	query := fmt.Sprintf("UPDATE `agent_%s_user` SET `LastIP` = ?, `ModifiedAt` = ? WHERE `ID` = ? ", agent_id)
+func (s *db_store) UpdateUserIPAndWallet(agent_id, uid, client_ip string, wallet float64) (e error) {
+	query := fmt.Sprintf("UPDATE `agent_%s_user` SET `LastIP` = ?, `Wallet` = ?, `ModifiedAt` = ? WHERE `ID` = ? ", agent_id)
 	_, e = s.db.Exec(
 		query,
 
 		client_ip,
+		wallet,
 		time.Now().UTC().Format(time.DateTime),
 		uid,
 	)
