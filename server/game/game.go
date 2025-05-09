@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -14,6 +15,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nats-io/nats.go"
 	"github.com/shopspring/decimal"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/chaosnote/wander/model/errs"
@@ -53,6 +56,7 @@ type store struct {
 	APIStore
 	SessionStore
 	WalletStore
+	MongoStore
 
 	game_impl GameImpl
 	mel_store *melody.Melody
@@ -129,9 +133,9 @@ func NewGameStore() GameStore {
 		if e != nil {
 			panic(e)
 		}
-		db.SetMaxOpenConns(100)          // Limit to N open connections
-		db.SetMaxIdleConns(10)           // Keep up to N idle connections
-		db.SetConnMaxLifetime(time.Hour) // Reuse connections for at most N
+		db.SetMaxOpenConns(100)                // Limit to N open connections
+		db.SetMaxIdleConns(10)                 // Keep up to N idle connections
+		db.SetConnMaxLifetime(5 * time.Minute) // Reuse connections for at most N
 
 		return db
 	})
@@ -160,11 +164,26 @@ func NewGameStore() GameStore {
 		return conn
 	})
 
+	di.Set(utils.SERVICE_MONGO, func() any {
+		client_options := options.Client().
+			ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s/", mongo_user, mongo_pw, mongo_addr)).
+			SetMaxPoolSize(100).
+			SetMinPoolSize(10).
+			SetMaxConnIdleTime(5 * time.Minute)
+
+		client, err := mongo.Connect(context.TODO(), client_options)
+		if err != nil {
+			panic(e)
+		}
+		return client
+	})
+
 	s.LogStore = di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore)
 
 	s.APIStore = NewAPIStore()
 	s.SessionStore = NewSessionStore()
 	s.WalletStore = NewWalletStore()
+	s.MongoStore = NewMongoStore()
 
 	s.mel_store = melody.New()
 
@@ -223,5 +242,6 @@ func (s *store) Close() {
 	di.MustGet(utils.SERVICE_MARIADB).(*sql.DB).Close()
 	di.MustGet(utils.SERVICE_NATS).(*nats.Conn).Close()
 	di.MustGet(utils.SERVICE_REDIS).(*redis.Client).Close()
+	di.MustGet(utils.SERVICE_MONGO).(*mongo.Client).Disconnect(context.TODO())
 	di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore).Flush()
 }

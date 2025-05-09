@@ -71,9 +71,9 @@ func (s *store) Start() {
 		if e != nil {
 			panic(e)
 		}
-		db.SetMaxOpenConns(100)          // Limit to N open connections
-		db.SetMaxIdleConns(10)           // Keep up to N idle connections
-		db.SetConnMaxLifetime(time.Hour) // Reuse connections for at most N
+		db.SetMaxOpenConns(100)                // Limit to N open connections
+		db.SetMaxIdleConns(10)                 // Keep up to N idle connections
+		db.SetConnMaxLifetime(5 * time.Minute) // Reuse connections for at most N
 
 		return db
 	})

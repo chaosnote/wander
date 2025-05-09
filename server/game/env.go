@@ -15,9 +15,11 @@ var (
 	db_pw   = os.Getenv("DB_PW")
 	db_name = os.Getenv("DB_NAME")
 
-	redis_addr = os.Getenv("REDIS_ADDR")
-	// redis_user   = os.Getenv("REDIS_USER")
-	// redis_pw     = os.Getenv("REDIS_PW")
+	mongo_addr = os.Getenv("MONGO_ADDR")
+	mongo_user = os.Getenv("MONGO_USER")
+	mongo_pw   = os.Getenv("MONGO_PW")
+
+	redis_addr   = os.Getenv("REDIS_ADDR")
 	redis_db_idx = os.Getenv("REDIS_DB_INDEX")
 
 	nats_addr = os.Getenv("NATS_ADDR")

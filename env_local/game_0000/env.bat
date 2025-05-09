@@ -14,6 +14,11 @@ set DB_USER=chris
 set DB_PW=123456
 set DB_NAME=game_dev
 
+@REM MONGO
+set MONGO_ADDR=192.168.0.236:27017
+set MONGO_USER=admin
+set MONGO_PW=password
+
 @REM NATS
 set NATS_ADDR=192.168.0.236:4222
 

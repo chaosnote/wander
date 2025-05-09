@@ -9,6 +9,7 @@ const (
 	SERVICE_MARIADB = "mariadb"
 	SERVICE_NATS    = "nats"
 	SERVICE_REDIS   = "redis"
+	SERVICE_MONGO   = "mongo"
 )
 
 var ErrKeyAlreadyExists = fmt.Errorf("map: key already exists")
