@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -175,7 +174,21 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	time.Sleep(1 * time.Second) // API 請求模擬(尚未處理)
+	var money float64
+	money, e = s.APIGet(player.AgentID).Takeout(player.TheirUID)
+	if e != nil {
+		if e != nil {
+			s.Error(e)
+			e = errs.E10001.Error()
+			return
+		}
+	}
+	player.Wallet = player.Wallet + money // 本地+額外值
+	defer func() {
+		if e != nil {
+			player.Wallet, e = s.APIGet(player.AgentID).Putin(player.TheirUID, player.Wallet)
+		}
+	}()
 
 	output, e := json.Marshal(api.HttpResponse{Code: api.HttpStatusOK, Content: player.ResLogin})
 	if e != nil {
@@ -207,5 +220,14 @@ func (s *store) HandlePlayerLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player.Wallet = body[model.KEY_WALLET].(float64)
+	player.Wallet, e = s.APIGet(player.AgentID).Putin(player.TheirUID, player.Wallet)
+	if e != nil {
+		s.Error(e)
+		return
+	}
 	e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, player.Wallet)
+	if e != nil {
+		s.Error(e)
+		return
+	}
 }

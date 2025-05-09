@@ -14,6 +14,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/shopspring/decimal"
 
+	"github.com/chaosnote/wander/data_center/api"
 	"github.com/chaosnote/wander/utils"
 )
 
@@ -31,6 +32,7 @@ type store struct {
 	NatsStore
 	RedisStore
 	PlayerStore
+	api.APIStore
 }
 
 //-----------------------------------------------
@@ -104,13 +106,14 @@ func (s *store) Start() {
 	s.NatsStore = NewNatsStore()
 	s.RedisStore = NewRedisStore()
 	s.PlayerStore = NewPlayerStore()
+	s.APIStore = api.NewAPIStore()
 
 	middleware := NewMiddlewareStore()
 	// router
 	router := mux.NewRouter()
 	router.Use(middleware.Logging)
 
-	// [TODO]儲值 (未處理)
+	// 更新值[未處理]
 	sub := router.PathPrefix("/api").Subrouter()
 
 	sub = router.PathPrefix("/guest").Subrouter()
