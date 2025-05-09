@@ -48,7 +48,7 @@ type wallet_store struct {
 	db *sql.DB
 }
 
-func (s *wallet_store) common(wallet Wallet) (e error) {
+func (s *wallet_store) store(wallet Wallet) (e error) {
 
 	query := fmt.Sprintf(
 		"INSERT INTO `agent_%s_wallet` (`ID`, `TheirUID`, `GameID`, `RoundID`, `BeforeDiff`, `Diff`, `AfterDiff`, `ActionType`, `TransactionDatetime`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -82,7 +82,7 @@ func (s *wallet_store) Takeout(wallet_setting WalletSetting) (e error) {
 		ActionType:          TAKEOUT,
 		TransactionDatetime: time.Now().UTC(),
 	}
-	e = s.common(wallet)
+	e = s.store(wallet)
 	if e != nil {
 		s.Error(e)
 		e = errs.E32001.Error()
@@ -102,7 +102,7 @@ func (s *wallet_store) Putin(wallet_setting WalletSetting) (e error) {
 		ActionType:          PUTIN,
 		TransactionDatetime: time.Now().UTC(),
 	}
-	e = s.common(wallet)
+	e = s.store(wallet)
 	if e != nil {
 		s.Error(e)
 		e = errs.E32002.Error()
