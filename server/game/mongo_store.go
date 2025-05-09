@@ -9,12 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type temp struct {
-	Name string
-	Age  int
+type OutputMongoStore interface {
+	RecordSave(uid string, model any) (e error)
+	RecordLoad(uid string, model any) (e error)
 }
 
-type MongoStore interface{}
+type MongoStore interface {
+	OutputMongoStore
+}
 
 type mongo_store struct {
 	utils.LogStore
@@ -60,14 +62,6 @@ func NewMongoStore() MongoStore {
 
 		record: client.Database("GameDB").Collection("Record"),
 	}
-
-	store.RecordSave("123", temp{Name: "chris", Age: 20})
-	var m temp
-	e := store.RecordLoad("123", &m)
-	if e != nil {
-		store.Error(e)
-	}
-	store.Debug(utils.LogFields{"name": m.Name, "age": m.Age})
 
 	return store
 }

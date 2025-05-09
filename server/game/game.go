@@ -46,6 +46,8 @@ type GameStore interface {
 	RegisterHandler(provider GameImpl) // 註冊開發者實作函式
 
 	SendGamePack(player member.Player, action string, payload []byte) (e error) // 發送遊戲封包
+
+	OutputMongoStore
 }
 
 //-----------------------------------------------
