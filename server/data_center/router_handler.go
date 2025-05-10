@@ -185,22 +185,24 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	var money float64
 	money, e = s.APIGet(player.AgentID).Takeout(ctx, player.TheirUID)
 	if e != nil {
-		if e != nil {
-			s.Error(e)
-			e = errs.E10001.Error()
-			return
-		}
+		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		e = errs.E10001.Error()
+		return
 	}
 	player.Wallet = player.Wallet + money // 本地+額外值
 	defer func() {
 		if e != nil {
 			player.Wallet, e = s.APIGet(player.AgentID).Putin(ctx, player.TheirUID, player.Wallet)
 		}
+		if e != nil {
+			s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+			return
+		}
 	}()
 
 	output, e := json.Marshal(api.HttpResponse{Code: api.HttpStatusOK, Content: player.ResLogin})
 	if e != nil {
-		s.Error(e)
+		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
 		e = errs.E00001.Error()
 		return
 	}
@@ -223,7 +225,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 
 	_, e = w.Write(output)
 	if e != nil {
-		s.Error(e)
+		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
 		e = errs.E10006.Error()
 	}
 }
