@@ -35,7 +35,9 @@ const (
 	E10002                         // WEB 服務回應( 非 OK )
 	E10003                         // Http Request <參數/格式>錯誤
 	E10004                         // Http POST Body 轉換失敗
-	E10005                         // Http Response 過程出錯
+	E10005                         // 玩家連線斷開
+	E10006                         // Http Response 過程出錯
+	E10007                         // 處理時間超出預期
 )
 
 const (

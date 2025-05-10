@@ -1,12 +1,14 @@
 package datacenter
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -71,6 +73,7 @@ func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 
 func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	var e error
+	var st = time.Now()
 
 	defer func() {
 		if e != nil && !errors.Is(e, errs.E10005.Error()) {
@@ -80,14 +83,12 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	player := &member.Player{}
-
 	e = utils.HttpRequestJSONUnmarshal(r.Body, &player.ReqLogin)
 	if e != nil {
 		s.Info(utils.LogFields{"error": e.Error()})
 		e = errs.E10004.Error()
 		return
 	}
-
 	s.Debug(utils.LogFields{"params": player.ReqLogin})
 
 	var data []byte
@@ -114,6 +115,11 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		"agent_id": player.AgentID,
 		"uid":      player.UID,
 	})
+
+	var timeout = 5 * time.Second
+	ctx := r.Context()
+	ctx_first, cancel_first := context.WithTimeout(ctx, timeout)
+	defer cancel_first()
 
 	uid_mu.Lock()
 	if _, ok := uid_store[player.UID]; ok {
@@ -147,6 +153,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 
 	if !s.BlackNotExisted(player.UID) {
 		e = errs.E14001.Error()
+		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
 		return
 	}
 
@@ -162,6 +169,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 
 	e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, 0)
 	if e != nil {
+		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
 		return
 	}
 	defer func() {
@@ -169,13 +177,13 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 			e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, player.Wallet)
 		}
 		if e != nil {
-			s.Error(e)
+			s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
 			return
 		}
 	}()
 
 	var money float64
-	money, e = s.APIGet(player.AgentID).Takeout(player.TheirUID)
+	money, e = s.APIGet(player.AgentID).Takeout(ctx, player.TheirUID)
 	if e != nil {
 		if e != nil {
 			s.Error(e)
@@ -186,7 +194,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	player.Wallet = player.Wallet + money // 本地+額外值
 	defer func() {
 		if e != nil {
-			player.Wallet, e = s.APIGet(player.AgentID).Putin(player.TheirUID, player.Wallet)
+			player.Wallet, e = s.APIGet(player.AgentID).Putin(ctx, player.TheirUID, player.Wallet)
 		}
 	}()
 
@@ -197,10 +205,26 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	select {
+	case <-ctx.Done():
+		e = errs.E10005.Error()
+		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		return
+	case <-ctx_first.Done():
+		if time.Since(st) >= timeout {
+			e = errs.E10007.Error()
+		} else {
+			e = errs.E10005.Error()
+		}
+		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		return
+	default:
+	}
+
 	_, e = w.Write(output)
 	if e != nil {
 		s.Error(e)
-		e = errs.E10005.Error()
+		e = errs.E10006.Error()
 	}
 }
 
@@ -220,7 +244,7 @@ func (s *store) HandlePlayerLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player.Wallet = body[model.KEY_WALLET].(float64)
-	player.Wallet, e = s.APIGet(player.AgentID).Putin(player.TheirUID, player.Wallet)
+	player.Wallet, e = s.APIGet(player.AgentID).Putin(r.Context(), player.TheirUID, player.Wallet)
 	if e != nil {
 		s.Error(e)
 		return

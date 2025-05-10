@@ -1,5 +1,7 @@
 package api
 
+import "context"
+
 // 資料庫表單( agent )
 type agent struct {
 	ID         string
@@ -13,6 +15,6 @@ type agent struct {
 type APIBuilder func(setting agent) Ship
 
 type Ship interface {
-	Takeout(their_uid string) (money float64, e error)
-	Putin(their_uid string, money float64) (left_money float64, e error)
+	Takeout(ctx context.Context, their_uid string) (money float64, e error)
+	Putin(ctx context.Context, their_uid string, money float64) (left_money float64, e error)
 }
