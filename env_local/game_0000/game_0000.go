@@ -36,9 +36,13 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 
 	// 玩家上線
 	// 玩家基礎資訊
-	content := &protobuf.Player{}
-	content.Name = player.UName
-	content.Wallet = player.Wallet
+
+	content := &protobuf.Init{
+		Player: &protobuf.Player{
+			Name:   player.UName,
+			Wallet: player.Wallet,
+		},
+	}
 
 	payload, e := proto.Marshal(content)
 	if e != nil {
