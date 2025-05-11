@@ -32,10 +32,13 @@ func (g *Game0000) Close() {
 func (g *Game0000) PlayerJoin(player member.Player) {
 	g.Debug(utils.LogFields{"join": player})
 
+	// g.RecordLoad()
+
 	// 玩家上線
 	// 玩家基礎資訊
 	content := &protobuf.Player{}
 	content.Name = player.UName
+	content.Wallet = player.Wallet
 
 	payload, e := proto.Marshal(content)
 	if e != nil {

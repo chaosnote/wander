@@ -4,6 +4,7 @@ option go_package = ".;protobuf";
 
 message Player{
     string name = 1;
+    double wallet = 2 ;
 }
 
 message Init{
