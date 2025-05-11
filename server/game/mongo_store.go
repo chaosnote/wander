@@ -11,6 +11,10 @@ import (
 
 type OutputMongoStore interface {
 	RecordSave(uid string, model any) (e error)
+	// RecordLoad
+	//
+	//	var model struct
+	//	RecordLoad(uid, &model)
 	RecordLoad(uid string, model any) (e error)
 }
 
@@ -41,10 +45,6 @@ func (s *mongo_store) RecordSave(uid string, model any) (e error) {
 	return
 }
 
-// RecordLoad
-//
-//	var model struct
-//	RecordLoad(uid, &model)
 func (s *mongo_store) RecordLoad(uid string, model any) (e error) {
 	filter := bson.D{{Key: "_id", Value: uid}}
 	e = s.record.FindOne(context.TODO(), filter).Decode(model)

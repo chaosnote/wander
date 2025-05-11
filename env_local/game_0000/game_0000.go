@@ -1,6 +1,7 @@
 package main
 
 import (
+	"idv/chris/model"
 	"idv/chris/model/protobuf"
 
 	"github.com/chaosnote/wander/game"
@@ -32,10 +33,11 @@ func (g *Game0000) Close() {
 func (g *Game0000) PlayerJoin(player member.Player) {
 	g.Debug(utils.LogFields{"join": player})
 
-	// g.RecordLoad()
+	// 玩家上線<資訊>
+	// ∟ 選擇(角色=>對應位置)
 
-	// 玩家上線
-	// 玩家基礎資訊
+	var m model.Game0000Model
+	g.RecordLoad(player.UID, m)
 
 	content := &protobuf.Init{
 		Player: &protobuf.Player{
