@@ -10,7 +10,7 @@ if "%1"=="" (
 
 cd /d %~dp0
 
-set out_dir="../env_local/game_%1/model/protobuf"
+set out_dir="../env_local/game_%1/protobuf"
 
 if exist %out_dir% (
     echo remove dir dist

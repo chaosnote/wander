@@ -1,9 +1,6 @@
 package main
 
 import (
-	"idv/chris/model"
-	"idv/chris/model/protobuf"
-
 	"github.com/chaosnote/wander/game"
 	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
@@ -12,6 +9,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	_ "github.com/looplab/fsm"
+
+	"idv/chris/protobuf"
+	"idv/chris/server/model"
 )
 
 type Game0000 struct {

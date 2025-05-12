@@ -9,16 +9,16 @@ replace github.com/chaosnote/melody => ../../../melody
 replace github.com/chaosnote/wander => ../../server
 
 require (
+	github.com/chaosnote/melody v0.0.0-00010101000000-000000000000
 	github.com/chaosnote/wander v0.0.0-00010101000000-000000000000
+	github.com/go-resty/resty/v2 v2.16.5
 	github.com/looplab/fsm v1.0.2
 	google.golang.org/protobuf v1.36.6
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/chaosnote/melody v0.0.0-00010101000000-000000000000 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible // indirect
-	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/go-sql-driver/mysql v1.9.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect

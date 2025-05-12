@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"idv/chris/model/protobuf"
 	"net/url"
 	"os"
 	"os/signal"
@@ -19,6 +18,8 @@ import (
 	"github.com/chaosnote/wander/model/api"
 	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/utils"
+
+	"idv/chris/protobuf"
 )
 
 // go run . -step 2
@@ -111,12 +112,13 @@ func main() {
 		}
 		logger.Debug(utils.LogFields{"action": pack.GetAction()})
 
-		content := &protobuf.Player{}
+		content := &protobuf.Init{}
 		e = proto.Unmarshal(pack.GetPayload(), content)
 		if e != nil {
 			panic(e)
 		}
-		logger.Debug(utils.LogFields{"name": content.GetName()})
+		player := content.GetPlayer()
+		logger.Debug(utils.LogFields{"player": player})
 	})
 
 	for i := 0; i < *step; i++ {
