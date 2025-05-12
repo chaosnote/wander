@@ -9,9 +9,9 @@ sudo docker-compose down
 ```
 
 ``` cmd
--new_console:n:t:[DC] cmd.exe /k ""%ConEmuBaseDir%\CmdInit.cmd"&cd ./data_center&env.bat&echo cls^&ggo run . -log_mode 0"
+-new_console:n:t:[DC] cmd.exe /k ""%ConEmuBaseDir%\CmdInit.cmd"&run_dc.bat"
 
--new_console:n:t:[Game_0000] cmd.exe /k ""%ConEmuBaseDir%\CmdInit.cmd"&cd ./game_0000&env.bat&echo cls^&go run -race . -log_mode 2"
+-new_console:n:t:[Server] cmd.exe /k ""%ConEmuBaseDir%\CmdInit.cmd"&run_game.bat 0000"
 
--new_console:n:t:[Monkey] cmd.exe /k ""%ConEmuBaseDir%\CmdInit.cmd"&cd ./monkey&echo cls^&go run -race ."
+-new_console:n:t:[Monkey] cmd.exe /k ""%ConEmuBaseDir%\CmdInit.cmd"&run_monkey.bat 0000"
 ```
