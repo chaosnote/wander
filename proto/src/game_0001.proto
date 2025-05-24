@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+//
+// Scalar Value Types 
+// ∟ https://protobuf.dev/programming-guides/proto3/ 
+//
+
+option go_package = ".;protobuf";
+
+message Player{
+    string name = 1;
+    double wallet = 2 ;
+}
+message OtherPlayer{
+    string name = 1;
+}
+message Limite{
+    uint64 min = 1;
+    uint64 max = 2;
+}
+message Room{
+    // 唯一碼
+    string id = 1;
+    // 入桌狀態{true:當前,false:否}
+    bool actived = 2;
+    // 顯示名稱
+    string name = 3;
+    // 入桌限制
+    Limite limite = 4 ;
+    // 依坐位順序
+    repeated OtherPlayer other_player = 5 ;
+}
+message Init{
+    Player player = 1 ;
+    map<string,Room> rooms = 2 ;
+}
