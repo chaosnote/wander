@@ -7,12 +7,26 @@ syntax = "proto3";
 
 option go_package = ".;protobuf";
 
+enum Action {
+    BET = 0 ;
+    RAISE = 1 ;
+    FOLDER = 2 ;
+}
 message Player{
+    // 顯示名稱
     string name = 1;
+    // 餘額
     double wallet = 2 ;
+    // 是否為房主
+    bool is_host = 3 ; 
 }
 message OtherPlayer{
+    // 顯示名稱
     string name = 1;
+    // 最後行為
+    Action last_action = 2 ;
+    // 是否為房主
+    bool is_host = 3 ; 
 }
 message Limite{
     uint64 min = 1;
@@ -25,12 +39,18 @@ message Room{
     bool actived = 2;
     // 顯示名稱
     string name = 3;
-    // 入桌限制
-    Limite limite = 4 ;
+    // 下注上下限
+    Limite bet_limite = 4 ;
+    // 總彩池上限/總封頂/底池上限
+    Limite pool_limite = 5 ;
     // 依坐位順序
-    repeated OtherPlayer other_player = 5 ;
+    repeated OtherPlayer other_player = 6 ;
+    // 總彩池
+    uint64 total_pool = 7 ;
 }
 message Init{
     Player player = 1 ;
     map<string,Room> rooms = 2 ;
+    // 當前在那桌
+    string room_id = 3 ;
 }
