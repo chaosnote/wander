@@ -1,18 +1,21 @@
 package main
 
 import (
+	"google.golang.org/protobuf/proto"
+
 	"github.com/chaosnote/wander/game"
 	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/utils"
-	"google.golang.org/protobuf/proto"
 
 	_ "github.com/looplab/fsm"
 
 	"idv/chris/protobuf"
 	"idv/chris/server/model"
 )
+
+// 單人遊戲
 
 type Game0000 struct {
 	utils.LogStore
@@ -33,12 +36,19 @@ func (g *Game0000) Close() {
 func (g *Game0000) PlayerJoin(player member.Player) {
 	g.Debug(utils.LogFields{"join": player})
 
-	// 玩家上線<資訊>
-	// ∟ 選擇(角色=>對應位置)
+	// 是否有斷點資訊
+	// ∟ 是 值反序列為 RoomModel
+	// ∟ 否 產生 RoomModel
+	//
+	// RoomModel 記錄至 GameModel
+	//
+	var m model.RoomModel
+	g.RecordLoad(player.UID, &m)
 
-	var m model.Game0000Model
-	g.RecordLoad(player.UID, m)
+	// 更新:
+	// ∟ 玩家錢包 + 當前[畫面]贏分
 
+	// 測試用[尚未處理]
 	content := &protobuf.Init{
 		Player: &protobuf.Player{
 			Name:   player.UName,
@@ -56,9 +66,13 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 }
 
 func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameMessage) {
-	// 玩家封包
+	// 處理玩家封包
+	// ∟ 斷點
 }
 
 func (g *Game0000) PlayerExit(player member.Player) {
 	// 玩家離線
+	// 是否觸發自動結束
+	// ∟ 是 觸發下一個狀態
+	// ∟ 否 儲存斷點
 }
