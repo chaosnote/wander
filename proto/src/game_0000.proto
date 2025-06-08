@@ -2,6 +2,12 @@ syntax = "proto3";
 
 option go_package = ".;protobuf";
 
+enum ActionType {
+    INIT = 0 ; 
+    BET = 1;
+    COMPLETE = 2 ;
+}
+
 message Player{
     string name = 1;
     double wallet = 2 ;

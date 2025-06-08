@@ -62,7 +62,7 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 		e = errs.E00005.Error()
 		return
 	}
-	g.GameStore.SendGamePack(player, "init", payload)
+	g.GameStore.SendGamePack(player, protobuf.ActionType_INIT.String(), payload)
 }
 
 func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameMessage) {
