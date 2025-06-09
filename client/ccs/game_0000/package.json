@@ -1,0 +1,10 @@
+{
+  "name": "game_0000",
+  "uuid": "4e307c9b-f5af-4035-8aca-26370a69d3c2",
+  "creator": {
+    "version": "3.8.2"
+  },
+  "devDependencies": {
+    "kernel": "file:../../../../learn-typescript/test-npm/dist/kernel-0.0.0-development.tgz"
+  }
+}
