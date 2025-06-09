@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"google.golang.org/protobuf/proto"
 
 	"github.com/chaosnote/wander/game"
@@ -68,6 +70,16 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameMessage) {
 	// 處理玩家封包
 	// ∟ 斷點
+
+	g.Debug(utils.LogFields{"action": pack.Action})
+	switch pack.Action {
+	case protobuf.ActionType_BET.String():
+		g.GameStore.SendGamePack(player, protobuf.ActionType_BET.String(), nil)
+	case protobuf.ActionType_COMPLETE.String():
+		g.GameStore.SendGamePack(player, protobuf.ActionType_COMPLETE.String(), nil)
+	default:
+		g.Error(fmt.Errorf("unknow action %s", pack.Action))
+	}
 }
 
 func (g *Game0000) PlayerExit(player member.Player) {
