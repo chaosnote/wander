@@ -64,7 +64,7 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 		e = errs.E00005.Error()
 		return
 	}
-	g.GameStore.SendGamePack(player, protobuf.ActionType_INIT.String(), payload)
+	g.GameStore.SendGamePack(player, protobuf.Action_INIT.String(), payload)
 }
 
 func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameMessage) {
@@ -73,10 +73,10 @@ func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameM
 
 	g.Debug(utils.LogFields{"action": pack.Action})
 	switch pack.Action {
-	case protobuf.ActionType_BET.String():
-		g.GameStore.SendGamePack(player, protobuf.ActionType_BET.String(), nil)
-	case protobuf.ActionType_COMPLETE.String():
-		g.GameStore.SendGamePack(player, protobuf.ActionType_COMPLETE.String(), nil)
+	case protobuf.Action_BET.String():
+		g.GameStore.SendGamePack(player, protobuf.Action_BET.String(), nil)
+	case protobuf.Action_COMPLETE.String():
+		g.GameStore.SendGamePack(player, protobuf.Action_COMPLETE.String(), nil)
 	default:
 		g.Error(fmt.Errorf("unknow action %s", pack.Action))
 	}

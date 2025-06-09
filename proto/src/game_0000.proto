@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = ".;protobuf";
 
-enum ActionType {
+enum Action {
     INIT = 0 ; 
     BET = 1;
     COMPLETE = 2 ;
