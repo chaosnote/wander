@@ -8,7 +8,7 @@ import kernel from 'kernel';
 //-----------------------------------------------
 import pb from "../protobuf/game_pb.js"; // 留意 tsconfig.json 與 *.js
 //-----------------------------------------------
-import { BaseInitComplete, SendPacket } from './components/Events';
+import { BaseInitComplete, SendGamePacket } from './components/Events';
 import { DI, DIKey } from './components/DI';
 import { BaseConfig } from './components/Base';
 //-----------------------------------------------
@@ -40,13 +40,13 @@ export class Main extends Component {
         let data = pb.Init.decode(payload);
         this.logger.debug(msg, `name:\t ${data.player.name}`, `wallet:\t ${data.player.wallet}`);
 
-        SendPacket.emit(pb.Action[pb.Action.BET], null) ;
+        SendGamePacket.emit(pb.Action[pb.Action.BET], null) ;
     }
     private onBetRes(payload: Uint8Array) {
         const msg = "onBetRes";
         this.logger.debug(msg, `action:\t BET`);
 
-        SendPacket.emit(pb.Action[pb.Action.COMPLETE], null) ;
+        SendGamePacket.emit(pb.Action[pb.Action.COMPLETE], null) ;
     }
     private onCompleteRes(payload: Uint8Array) {
         const msg = "onCompleteRes";

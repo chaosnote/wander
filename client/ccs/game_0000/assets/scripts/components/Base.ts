@@ -5,7 +5,7 @@ import { ILogger, IWebSocketConn } from "kernel";
 import kernel from "kernel";
 //-----------------------------------------------
 import { ReqGuestToken } from './APIRequest';
-import { BaseInitComplete, SendPacket } from './Events';
+import { BaseInitComplete, SendGamePacket } from './Events';
 import { DI, DIKey } from './DI';
 //-----------------------------------------------
 import pb from "../../protobuf/game_pb.js"; // 留意 tsconfig.json 與 *.js
@@ -42,7 +42,7 @@ export class Base extends Component {
         // 載入靜態資訊( 文件、圖片 ... )、觸發 loading bar
         //
         //
-        SendPacket.on(this.onSendPackToGameSVR.bind(this));
+        SendGamePacket.on(this.onSendGamePack.bind(this));
     }
 
     async start() {
@@ -65,7 +65,7 @@ export class Base extends Component {
 
             let message = pb.GameMessage.decode(pack);
             if (message.type == pb.GameMessage.MessageType.RESPONSE) {
-                this.logger.debug(msg+".GameMessage", `action:\t ${message.action}`);
+                this.logger.debug(msg+".onReceiveGameMessage", `action:\t ${message.action}`);
 
                 let func = DI.must_get<(payload:Uint8Array)=>void>(message.action)
                 func(message.payload) ;
@@ -80,7 +80,7 @@ export class Base extends Component {
         BaseInitComplete.emit(config);
     }
 
-    private onSendPackToGameSVR(action: string, pack: Uint8Array) {
+    private onSendGamePack(action: string, pack: Uint8Array) {
         const msg = "onPackToGameSVR";
         this.logger.debug(msg, `action:\n${action}`);
         let output = pb.GameMessage.encode({

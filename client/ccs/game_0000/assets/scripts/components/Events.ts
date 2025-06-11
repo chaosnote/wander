@@ -12,4 +12,4 @@ export const BaseInitComplete: ISignal = kernel.genSignal();
 /**
  * 事件:前端發送遊戲封包
  */
-export const SendPacket: ISignal = kernel.genSignal();
+export const SendGamePacket: ISignal = kernel.genSignal();
