@@ -81,7 +81,7 @@ export class Base extends Component {
     }
 
     private onSendGamePack(action: string, pack: Uint8Array) {
-        const msg = "onPackToGameSVR";
+        const msg = "onSendGamePack";
         this.logger.debug(msg, `action:\n${action}`);
         let output = pb.GameMessage.encode({
             action: action,
