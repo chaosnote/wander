@@ -27,9 +27,13 @@ export class Main extends Component {
         this.logger.debug(msg, config);
 
         // 封包註冊
-        DI.set(pb.Action[pb.Action.INIT], this.onInit.bind(this)) ;
-        DI.set(pb.Action[pb.Action.BET], this.onBetRes.bind(this)) ;
-        DI.set(pb.Action[pb.Action.COMPLETE], this.onCompleteRes.bind(this)) ;
+        DI.set_share(DIKey.WSObserver, () => {
+            let observer: { [key: string]: (payload: Uint8Array) => void } = {};
+            observer[pb.Action[pb.Action.INIT]] = this.onInit.bind(this);
+            observer[pb.Action[pb.Action.BET]] = this.onBetRes.bind(this);
+            observer[pb.Action[pb.Action.COMPLETE]] = this.onCompleteRes.bind(this);
+            return observer;
+        });
 
         const ws = DI.must_get<IWebSocketConn>(DIKey.WSConn);
         ws.dial(config.WSAddr, "arraybuffer");
@@ -40,13 +44,13 @@ export class Main extends Component {
         let data = pb.Init.decode(payload);
         this.logger.debug(msg, `name:\t ${data.player.name}`, `wallet:\t ${data.player.wallet}`);
 
-        SendGamePacket.emit(pb.Action[pb.Action.BET], null) ;
+        SendGamePacket.emit(pb.Action[pb.Action.BET], null);
     }
     private onBetRes(payload: Uint8Array) {
         const msg = "onBetRes";
         this.logger.debug(msg, `action:\t BET`);
 
-        SendGamePacket.emit(pb.Action[pb.Action.COMPLETE], null) ;
+        SendGamePacket.emit(pb.Action[pb.Action.COMPLETE], null);
     }
     private onCompleteRes(payload: Uint8Array) {
         const msg = "onCompleteRes";

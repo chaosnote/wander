@@ -67,22 +67,25 @@ export class Base extends Component {
             if (message.type == pb.GameMessage.MessageType.RESPONSE) {
                 this.logger.debug(msg+".onReceiveGameMessage", `action:\t ${message.action}`);
 
-                let func = DI.must_get<(payload:Uint8Array)=>void>(message.action)
+                let list = DI.must_get<{[key:string]:(payload:Uint8Array)=>void}>(DIKey.WSObserver) ;
+                let func = list[message.action] ;
+                if(func == undefined){
+                    throw new Error(`unset action:\t ${message.action}`) ;
+                }
                 func(message.payload) ;
-
                 return;
             }
             // 處理非遊戲封包
             //
         });
-        DI.set(DIKey.WSConn, ws);
+        DI.set_share(DIKey.WSConn, ()=>ws);
         //
         BaseInitComplete.emit(config);
     }
 
     private onSendGamePack(action: string, pack: Uint8Array) {
         const msg = "onSendGamePack";
-        this.logger.debug(msg, `action:\n${action}`);
+        this.logger.debug(msg, `action: ${action}`);
         let output = pb.GameMessage.encode({
             action: action,
             payload: pack,
