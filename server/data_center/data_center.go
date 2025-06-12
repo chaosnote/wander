@@ -45,7 +45,7 @@ func (s *store) Start() {
 	var di = utils.GetDI()
 	var e error
 
-	di.Set(utils.SERVICE_LOGGER, func() any {
+	di.SetShare(utils.SERVICE_LOGGER, func(...interface{}) any {
 		var logger utils.LogStore
 		var log_path = filepath.Join("./logs/data_center")
 		switch *LOG_MODE {
@@ -59,7 +59,7 @@ func (s *store) Start() {
 		return logger
 	})
 
-	di.Set(utils.SERVICE_MARIADB, func() any {
+	di.SetShare(utils.SERVICE_MARIADB, func(...interface{}) any {
 		// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
 		cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
 		var db *sql.DB
@@ -78,7 +78,7 @@ func (s *store) Start() {
 		return db
 	})
 
-	di.Set(utils.SERVICE_NATS, func() any {
+	di.SetShare(utils.SERVICE_NATS, func(...interface{}) any {
 		var conn *nats.Conn
 		conn, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
 		if e != nil {
@@ -87,7 +87,7 @@ func (s *store) Start() {
 		return conn
 	})
 
-	di.Set(utils.SERVICE_REDIS, func() any {
+	di.SetShare(utils.SERVICE_REDIS, func(...interface{}) any {
 		d, _ := decimal.NewFromString(redis_db_idx)
 		var conn *redis.Client
 		conn = redis.NewClient(&redis.Options{

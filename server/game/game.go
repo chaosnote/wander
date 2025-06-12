@@ -109,7 +109,7 @@ func NewGameStore() GameStore {
 	var e error
 	var di = utils.GetDI()
 
-	di.Set(utils.SERVICE_LOGGER, func() any {
+	di.SetShare(utils.SERVICE_LOGGER, func(...interface{}) any {
 		var logger utils.LogStore
 		var log_path = filepath.Join(log_dir, fmt.Sprintf("game_%s", *GAME_ID))
 		switch *LOG_MODE {
@@ -123,7 +123,7 @@ func NewGameStore() GameStore {
 		return logger
 	})
 
-	di.Set(utils.SERVICE_MARIADB, func() any {
+	di.SetShare(utils.SERVICE_MARIADB, func(...interface{}) any {
 		// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
 		cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
 		var db *sql.DB
@@ -142,7 +142,7 @@ func NewGameStore() GameStore {
 		return db
 	})
 
-	di.Set(utils.SERVICE_NATS, func() any {
+	di.SetShare(utils.SERVICE_NATS, func(...interface{}) any {
 		var conn *nats.Conn
 		conn, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
 		if e != nil {
@@ -152,7 +152,7 @@ func NewGameStore() GameStore {
 		return conn
 	})
 
-	di.Set(utils.SERVICE_REDIS, func() any {
+	di.SetShare(utils.SERVICE_REDIS, func(...interface{}) any {
 		d, _ := decimal.NewFromString(redis_db_idx)
 		var conn *redis.Client
 		conn = redis.NewClient(&redis.Options{
@@ -166,7 +166,7 @@ func NewGameStore() GameStore {
 		return conn
 	})
 
-	di.Set(utils.SERVICE_MONGO, func() any {
+	di.SetShare(utils.SERVICE_MONGO, func(...interface{}) any {
 		client_options := options.Client().
 			ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s/", mongo_user, mongo_pw, mongo_addr)).
 			SetMaxPoolSize(100).
