@@ -33,6 +33,9 @@ func GenSerial(key string) string {
 	}
 	pre := decimal.NewFromInt(serial_id_pre).String()
 	sub := decimal.NewFromInt(tmp_sub).String()
+	if len(sub) > 0 {
+		sub = "." + sub
+	}
 
 	return key + pre + sub
 }
