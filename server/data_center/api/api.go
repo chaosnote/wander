@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/chaosnote/wander/utils"
 )
@@ -20,7 +19,7 @@ type api_store struct {
 }
 
 func (s *api_store) init() {
-	query := fmt.Sprintf("SELECT * FROM `agent` ;")
+	query := "SELECT * FROM `agent` ;"
 	rows, e := s.db.Query(query)
 	if e != nil {
 		panic(e)
