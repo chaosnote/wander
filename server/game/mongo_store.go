@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 )
 
 type OutputMongoStore interface {
@@ -23,12 +24,14 @@ type MongoStore interface {
 }
 
 type mongo_store struct {
-	utils.LogStore
+	logger *zap.Logger
 
 	record *mongo.Collection
 }
 
 func (s *mongo_store) RecordSave(uid string, model any) (e error) {
+	const msg = "RecordSave"
+
 	// 定義查詢條件 (根據 _id 欄位)
 	filter := bson.D{{Key: "_id", Value: uid}}
 
@@ -39,7 +42,7 @@ func (s *mongo_store) RecordSave(uid string, model any) (e error) {
 	opts := options.Update().SetUpsert(true)
 	_, e = s.record.UpdateOne(context.Background(), filter, update, opts)
 	if e != nil {
-		s.Error(e)
+		s.logger.Error(msg, zap.Error(e))
 		return
 	}
 	return
@@ -56,9 +59,9 @@ func (s *mongo_store) RecordLoad(uid string, model any) (e error) {
 func NewMongoStore() MongoStore {
 	di := utils.GetDI()
 
-	client := di.MustGet(utils.SERVICE_MONGO).(*mongo.Client)
+	client := di.MustGet(SERVICE_MONGO).(*mongo.Client)
 	store := &mongo_store{
-		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
+		logger: di.MustGet(LOGGER_SYSTEM).(*zap.Logger),
 
 		record: client.Database("GameDB").Collection("Record"),
 	}

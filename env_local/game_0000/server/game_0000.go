@@ -3,15 +3,16 @@ package main
 import (
 	"fmt"
 
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
+
+	_ "github.com/looplab/fsm"
 
 	"github.com/chaosnote/wander/game"
 	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/utils"
-
-	_ "github.com/looplab/fsm"
 
 	"idv/chris/protobuf"
 	"idv/chris/server/model"
@@ -20,23 +21,26 @@ import (
 // 單人遊戲
 
 type Game0000 struct {
-	utils.LogStore
+	logger *zap.Logger
 	game.GameStore
 }
 
-func (g *Game0000) Start(logger utils.LogStore) {
+func (g *Game0000) Start() {
+	var di = utils.GetDI()
+	g.logger = di.MustGet(game.LOGGER_GAME, "0000").(*zap.Logger)
 	// 遊戲啟動
-	g.LogStore = logger
-	g.Debug(utils.LogFields{"tip": "game_start"})
+	g.logger.Debug("game_start")
 }
 
 func (g *Game0000) Close() {
 	// 遊戲關閉
-	g.Debug(utils.LogFields{"tip": "game_close"})
+	g.logger.Debug("game_close")
 }
 
 func (g *Game0000) PlayerJoin(player member.Player) {
-	g.Debug(utils.LogFields{"join": player})
+	const msg = "PlayerJoin"
+	player_logger := utils.GetDI().MustGet(game.LOGGER_GAME, player.UID).(*zap.Logger)
+	player_logger.Debug(msg, zap.Any("player", player))
 
 	// 是否有斷點資訊
 	// ∟ 是 值反序列為 RoomModel
@@ -60,7 +64,7 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 
 	payload, e := proto.Marshal(content)
 	if e != nil {
-		g.Info(utils.LogFields{"error": e.Error()})
+		player_logger.Error(msg, zap.Error(e))
 		e = errs.E00005.Error()
 		return
 	}
@@ -68,21 +72,28 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 }
 
 func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameMessage) {
+	const msg = "PlayerJoin"
+	player_logger := utils.GetDI().MustGet(game.LOGGER_GAME, player.UID).(*zap.Logger)
+
 	// 處理玩家封包
 	// ∟ 斷點
 
-	g.Debug(utils.LogFields{"action": pack.Action})
+	player_logger.Debug(msg, zap.String("action", pack.Action))
+
 	switch pack.Action {
 	case protobuf.Action_BET.String():
 		g.GameStore.SendGamePack(player, protobuf.Action_BET.String(), nil)
 	case protobuf.Action_COMPLETE.String():
 		g.GameStore.SendGamePack(player, protobuf.Action_COMPLETE.String(), nil)
 	default:
-		g.Error(fmt.Errorf("unknow action %s", pack.Action))
+		player_logger.Error(msg, zap.Error(fmt.Errorf("unknow action %s", pack.Action)))
 	}
 }
 
 func (g *Game0000) PlayerExit(player member.Player) {
+	// const msg = "PlayerJoin"
+	// player_logger := utils.GetDI().MustGet(game.LOGGER_GAME, player.UID).(*zap.Logger)
+
 	// 玩家離線
 	// 是否觸發自動結束
 	// ∟ 是 觸發下一個狀態

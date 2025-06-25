@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
 
 	"github.com/chaosnote/wander/model/api"
 	"github.com/chaosnote/wander/model/errs"
@@ -20,10 +21,12 @@ type APIStore interface {
 }
 
 type api_store struct {
-	utils.LogStore
+	logger *zap.Logger
 }
 
 func (s *api_store) Login(params member.ReqLogin) (output member.ResLogin, e error) {
+	const msg = "Login"
+
 	client := resty.New()
 	client.SetTimeout(5 * time.Second)
 
@@ -36,7 +39,7 @@ func (s *api_store) Login(params member.ReqLogin) (output member.ResLogin, e err
 
 	res, e := client.R().SetBody(params).Post(u.String())
 	if e != nil {
-		s.Error(e)
+		s.logger.Error(msg, zap.Error(e))
 		e = errs.E10001.Error()
 		return
 	}
@@ -48,7 +51,7 @@ func (s *api_store) Login(params member.ReqLogin) (output member.ResLogin, e err
 
 	e = json.Unmarshal(res.Body(), &body)
 	if e != nil {
-		s.Error(e)
+		s.logger.Error(msg, zap.Error(e))
 		e = errs.E00001.Error()
 		return
 	}
@@ -82,6 +85,6 @@ func NewAPIStore() APIStore {
 	var di = utils.GetDI()
 
 	return &api_store{
-		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
+		logger: di.MustGet(LOGGER_SYSTEM).(*zap.Logger),
 	}
 }

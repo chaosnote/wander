@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/chaosnote/melody"
@@ -40,6 +41,7 @@ var (
 )
 
 func getToken() (token string) {
+	const msg = "getToken"
 	client := resty.New()
 	client.SetTimeout(5 * time.Second)
 
@@ -63,25 +65,27 @@ func getToken() (token string) {
 		panic(output.Code)
 	}
 	token = output.Content["token"]
-	logger.Debug(utils.LogFields{"token": token})
+	logger.Debug(msg, zap.String("token", token))
 	return
 }
 
 func dial(value string) {
+	const msg = "dial"
+
 	u := url.URL{
 		Scheme:   "ws",
 		Host:     ":8081",
 		Path:     "/ws/00/0000",
 		RawQuery: fmt.Sprintf("token=%s", value),
 	}
-	logger.Debug(utils.LogFields{"url": u.String()})
+	logger.Debug(msg, zap.String("url", u.String()))
 
 	e := monkey.Dial(
 		u,
 		map[string]any{},
 	)
 	if e != nil {
-		logger.Error(e)
+		logger.Error(msg, zap.Error(e))
 	}
 }
 
@@ -93,16 +97,16 @@ func main() {
 		tmp_token = getToken()
 	}
 
-	logger.Debug(utils.LogFields{"tip": "enter"})
+	logger.Debug("enter")
 
 	monkey.HandleConnect(func(s *melody.Session) {
-		logger.Debug(utils.LogFields{"tip": "connect"})
+		logger.Debug("connect")
 	})
 	monkey.HandleDisconnect(func(s *melody.Session) {
-		logger.Debug(utils.LogFields{"tip": "disconnect"})
+		logger.Debug("disconnect")
 	})
 	monkey.HandleMessage(func(s *melody.Session, msg []byte) {
-		logger.Debug(utils.LogFields{"msg": string(msg)})
+		logger.Debug(string(msg))
 	})
 	monkey.HandleMessageBinary(func(s *melody.Session, b []byte) {
 		pack := &message.GameMessage{}
@@ -110,7 +114,7 @@ func main() {
 		if e != nil {
 			panic(e)
 		}
-		logger.Debug(utils.LogFields{"action": pack.GetAction()})
+		logger.Debug(pack.GetAction())
 
 		content := &protobuf.Init{}
 		e = proto.Unmarshal(pack.GetPayload(), content)
@@ -118,7 +122,8 @@ func main() {
 			panic(e)
 		}
 		player := content.GetPlayer()
-		logger.Debug(utils.LogFields{"player": player})
+
+		logger.Debug(pack.GetAction(), zap.Any("player", player))
 	})
 
 	for i := 0; i < *step; i++ {
@@ -134,6 +139,6 @@ func main() {
 
 	monkey.Close()
 
-	logger.Debug(utils.LogFields{"tip": "exit"})
-	logger.Flush()
+	logger.Debug("exit")
+	logger.Sync()
 }

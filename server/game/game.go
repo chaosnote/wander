@@ -17,6 +17,7 @@ import (
 	"github.com/shopspring/decimal"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/chaosnote/wander/model/errs"
@@ -26,9 +27,26 @@ import (
 	"github.com/chaosnote/wander/utils"
 )
 
+//-----------------------------------------------
+
+func gen_logger(log_mode int, log_path string) *zap.Logger {
+	var logger *zap.Logger
+	switch log_mode {
+	case 0:
+		logger = utils.NewConsoleLogger(1)
+	case 1:
+		logger = utils.NewFileLogger(log_path, 1)
+	default:
+		panic(fmt.Errorf("unknow log mode (%v)", log_mode))
+	}
+	return logger
+}
+
+//-----------------------------------------------
+
 // 遊戲開發者實做
 type GameImpl interface {
-	Start(logger utils.LogStore)
+	Start()
 	Close()
 
 	PlayerJoin(player member.Player)
@@ -53,7 +71,7 @@ type GameStore interface {
 //-----------------------------------------------
 
 type store struct {
-	utils.LogStore
+	logger *zap.Logger
 
 	APIStore
 	SessionStore
@@ -69,10 +87,11 @@ func (s *store) RegisterHandler(provider GameImpl) {
 }
 
 func (s *store) SendGamePack(player member.Player, action string, payload []byte) (e error) {
+	const msg = "SendGamePack"
 	session, ok := s.SessionGet(player.UID)
 	if !ok {
 		e = errs.E30002.Error()
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Error(msg, zap.Error(e))
 		return
 	}
 
@@ -86,13 +105,13 @@ func (s *store) SendGamePack(player member.Player, action string, payload []byte
 	var content []byte
 	content, e = proto.Marshal(pack)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Error(msg, zap.Error(e))
 		e = errs.E00005.Error()
 		return
 	}
 	e = session.WriteBinary(content)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Error(msg, zap.Error(e))
 		e = errs.E31001.Error()
 		return
 	}
@@ -101,100 +120,9 @@ func (s *store) SendGamePack(player member.Player, action string, payload []byte
 
 //-----------------------------------------------
 
-func NewGameStore() GameStore {
-	flag.Parse()
-
-	s := &store{}
-
-	var e error
-	var di = utils.GetDI()
-
-	di.SetShare(utils.SERVICE_LOGGER, func(...interface{}) any {
-		var logger utils.LogStore
-		var log_path = filepath.Join(log_dir, fmt.Sprintf("game_%s", *GAME_ID))
-		switch *LOG_MODE {
-		case 0:
-			logger = utils.NewConsoleLogger(1)
-		case 2:
-			logger = utils.NewMixLogger(log_path, 2)
-		default:
-			logger = utils.NewFileLogger(log_path, 1)
-		}
-		return logger
-	})
-
-	di.SetShare(utils.SERVICE_MARIADB, func(...interface{}) any {
-		// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
-		cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
-		var db *sql.DB
-		db, e = sql.Open("mysql", cmd)
-		if e != nil {
-			panic(e)
-		}
-		e = db.Ping()
-		if e != nil {
-			panic(e)
-		}
-		db.SetMaxOpenConns(100)                // Limit to N open connections
-		db.SetMaxIdleConns(10)                 // Keep up to N idle connections
-		db.SetConnMaxLifetime(5 * time.Minute) // Reuse connections for at most N
-
-		return db
-	})
-
-	di.SetShare(utils.SERVICE_NATS, func(...interface{}) any {
-		var conn *nats.Conn
-		conn, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
-		if e != nil {
-			panic(e)
-		}
-		conn.Subscribe(utils.Subject(*GAME_ID, subj.PLAYER_KICK, "*"), s.HandlePlayerKick)
-		return conn
-	})
-
-	di.SetShare(utils.SERVICE_REDIS, func(...interface{}) any {
-		d, _ := decimal.NewFromString(redis_db_idx)
-		var conn *redis.Client
-		conn = redis.NewClient(&redis.Options{
-			Addr: redis_addr,
-			DB:   int(d.IntPart()),
-		})
-		e = conn.Ping().Err()
-		if e != nil {
-			panic(e)
-		}
-		return conn
-	})
-
-	di.SetShare(utils.SERVICE_MONGO, func(...interface{}) any {
-		client_options := options.Client().
-			ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s/", mongo_user, mongo_pw, mongo_addr)).
-			SetMaxPoolSize(100).
-			SetMinPoolSize(10).
-			SetMaxConnIdleTime(5 * time.Minute)
-
-		client, err := mongo.Connect(context.TODO(), client_options)
-		if err != nil {
-			panic(e)
-		}
-		return client
-	})
-
-	s.LogStore = di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore)
-
-	s.APIStore = NewAPIStore()
-	s.SessionStore = NewSessionStore()
-	s.WalletStore = NewWalletStore()
-	s.MongoStore = NewMongoStore()
-
-	s.mel_store = melody.New()
-
-	return s
-}
-
-//-----------------------------------------------
-
 func (s *store) Start() {
+	const msg = "Start"
+
 	var e error
 
 	s.mel_store.HandleConnect(s.handleConnect)
@@ -218,7 +146,7 @@ func (s *store) Start() {
 		if e != nil {
 			return e
 		}
-		s.Debug(utils.LogFields{"path": template})
+		s.logger.Debug(msg, zap.String("path", template))
 		return nil
 	})
 	if e != nil {
@@ -232,8 +160,7 @@ func (s *store) Start() {
 		}
 	}()
 
-	var di = utils.GetDI()
-	s.game_impl.Start(di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore))
+	s.game_impl.Start()
 }
 
 func (s *store) Close() {
@@ -241,9 +168,100 @@ func (s *store) Close() {
 	s.mel_store.Close()
 
 	var di = utils.GetDI()
-	di.MustGet(utils.SERVICE_MARIADB).(*sql.DB).Close()
-	di.MustGet(utils.SERVICE_NATS).(*nats.Conn).Close()
-	di.MustGet(utils.SERVICE_REDIS).(*redis.Client).Close()
-	di.MustGet(utils.SERVICE_MONGO).(*mongo.Client).Disconnect(context.TODO())
-	di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore).Flush()
+	di.MustGet(SERVICE_MARIADB).(*sql.DB).Close()
+	di.MustGet(SERVICE_NATS).(*nats.Conn).Close()
+	di.MustGet(SERVICE_REDIS).(*redis.Client).Close()
+	di.MustGet(SERVICE_MONGO).(*mongo.Client).Disconnect(context.TODO())
+	di.MustGet(LOGGER_SYSTEM).(*zap.Logger).Sync()
+	di.MustGet(LOGGER_GAME).(*zap.Logger).Sync()
+}
+
+//-----------------------------------------------
+
+func NewGameStore() GameStore {
+	flag.Parse()
+
+	s := &store{}
+
+	var e error
+	var di = utils.GetDI()
+
+	log_mode := *LOG_MODE
+	di.SetShare(LOGGER_SYSTEM, func(...interface{}) any {
+		var log_path = filepath.Join(log_dir, fmt.Sprintf("game_%s", *GAME_ID))
+		return gen_logger(log_mode, log_path)
+	})
+	di.Set(LOGGER_GAME, func(args ...interface{}) any {
+		var uid = args[0].(string)
+		var log_path = filepath.Join(log_dir, *GAME_ID, uid)
+		return gen_logger(log_mode, log_path)
+	})
+
+	di.SetShare(SERVICE_MARIADB, func(...interface{}) any {
+		// 例 : "user:password@tcp(ip)?parseTime=true/dbname"
+		cmd := fmt.Sprintf(`%s:%s@tcp(%s)/%s?parseTime=true`, db_user, db_pw, db_addr, db_name)
+		var db *sql.DB
+		db, e = sql.Open("mysql", cmd)
+		if e != nil {
+			panic(e)
+		}
+		e = db.Ping()
+		if e != nil {
+			panic(e)
+		}
+		db.SetMaxOpenConns(100)                // Limit to N open connections
+		db.SetMaxIdleConns(10)                 // Keep up to N idle connections
+		db.SetConnMaxLifetime(5 * time.Minute) // Reuse connections for at most N
+
+		return db
+	})
+
+	di.SetShare(SERVICE_NATS, func(...interface{}) any {
+		var conn *nats.Conn
+		conn, e = nats.Connect(fmt.Sprintf("nats://%s", nats_addr))
+		if e != nil {
+			panic(e)
+		}
+		conn.Subscribe(utils.Subject(*GAME_ID, subj.PLAYER_KICK, "*"), s.HandlePlayerKick)
+		return conn
+	})
+
+	di.SetShare(SERVICE_REDIS, func(...interface{}) any {
+		d, _ := decimal.NewFromString(redis_db_idx)
+		var conn *redis.Client
+		conn = redis.NewClient(&redis.Options{
+			Addr: redis_addr,
+			DB:   int(d.IntPart()),
+		})
+		e = conn.Ping().Err()
+		if e != nil {
+			panic(e)
+		}
+		return conn
+	})
+
+	di.SetShare(SERVICE_MONGO, func(...interface{}) any {
+		client_options := options.Client().
+			ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s/", mongo_user, mongo_pw, mongo_addr)).
+			SetMaxPoolSize(100).
+			SetMinPoolSize(10).
+			SetMaxConnIdleTime(5 * time.Minute)
+
+		client, err := mongo.Connect(context.TODO(), client_options)
+		if err != nil {
+			panic(e)
+		}
+		return client
+	})
+
+	s.logger = di.MustGet(LOGGER_SYSTEM).(*zap.Logger)
+
+	s.APIStore = NewAPIStore()
+	s.SessionStore = NewSessionStore()
+	s.WalletStore = NewWalletStore()
+	s.MongoStore = NewMongoStore()
+
+	s.mel_store = melody.New()
+
+	return s
 }

@@ -3,6 +3,9 @@ package api
 import (
 	"database/sql"
 
+	"go.uber.org/zap"
+
+	"github.com/chaosnote/wander/data_center/internal"
 	"github.com/chaosnote/wander/utils"
 )
 
@@ -11,7 +14,7 @@ type APIStore interface {
 }
 
 type api_store struct {
-	utils.LogStore
+	logger *zap.Logger
 
 	db *sql.DB
 
@@ -56,8 +59,8 @@ func (s *api_store) APIGet(agent_id string) Ship {
 func NewAPIStore() APIStore {
 	di := utils.GetDI()
 	store := &api_store{
-		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
-		db:       di.MustGet(utils.SERVICE_MARIADB).(*sql.DB),
+		logger: di.MustGet(internal.LOGGER_SYSTEM).(*zap.Logger),
+		db:     di.MustGet(internal.SERVICE_MARIADB).(*sql.DB),
 
 		ship_store: map[string]Ship{},
 	}

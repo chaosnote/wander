@@ -4,14 +4,6 @@ import (
 	"fmt"
 )
 
-const (
-	SERVICE_LOGGER  = "logger"
-	SERVICE_MARIADB = "mariadb"
-	SERVICE_NATS    = "nats"
-	SERVICE_REDIS   = "redis"
-	SERVICE_MONGO   = "mongo"
-)
-
 var ErrKeyAlreadyExists = fmt.Errorf("map: key already exists")
 
 type CreateFunc func(args ...interface{}) any

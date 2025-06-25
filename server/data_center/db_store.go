@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap"
+
+	"github.com/chaosnote/wander/data_center/internal"
 	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/utils"
@@ -17,12 +20,14 @@ type DBStore interface {
 }
 
 type db_store struct {
-	utils.LogStore
+	logger *zap.Logger
 
 	db *sql.DB
 }
 
 func (s *db_store) FindUserByID(agent_id, uid string) (user member.User, e error) {
+	const msg = "FindUserByID"
+
 	query := fmt.Sprintf("SELECT * FROM `agent_%s_user` WHERE `ID` = ?", agent_id)
 	row := s.db.QueryRow(query, uid)
 	e = row.Scan(
@@ -36,7 +41,7 @@ func (s *db_store) FindUserByID(agent_id, uid string) (user member.User, e error
 		&user.ModifiedAt,
 	)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Error(msg, zap.String("uid", uid), zap.Error(e))
 		e = errs.E12002.Error()
 		return
 	}
@@ -44,6 +49,8 @@ func (s *db_store) FindUserByID(agent_id, uid string) (user member.User, e error
 }
 
 func (s *db_store) UpdateUserIPAndWallet(agent_id, uid, client_ip string, wallet float64) (e error) {
+	const msg = "UpdateUserIPAndWallet"
+
 	query := fmt.Sprintf("UPDATE `agent_%s_user` SET `LastIP` = ?, `Wallet` = ?, `ModifiedAt` = ? WHERE `ID` = ? ", agent_id)
 	_, e = s.db.Exec(
 		query,
@@ -54,7 +61,7 @@ func (s *db_store) UpdateUserIPAndWallet(agent_id, uid, client_ip string, wallet
 		uid,
 	)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Error(msg, zap.String("uid", uid), zap.Error(e))
 		e = errs.E12003.Error()
 		return
 	}
@@ -62,6 +69,8 @@ func (s *db_store) UpdateUserIPAndWallet(agent_id, uid, client_ip string, wallet
 }
 
 func (s *db_store) InsertUser(agent_id, their_uname, their_ugrant string, their_uid, wallet int64) (uid string, e error) {
+	const msg = "InsertUser"
+
 	query := fmt.Sprintf("INSERT INTO `agent_%s_user` (`TheirUID`, `TheirUName`, `TheirUGrant`, `Wallet`, `CreatedAt`, `ModifiedAt`) VALUES (?, ?, ?, ?, ?, ?);", agent_id)
 	create_at := time.Now().UTC().Format(time.DateTime)
 	_, e = s.db.Exec(
@@ -75,7 +84,7 @@ func (s *db_store) InsertUser(agent_id, their_uname, their_ugrant string, their_
 		create_at,
 	)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Error(msg, zap.Int64("their_uid", their_uid), zap.Error(e))
 		e = errs.E12001.Error()
 		return
 	}
@@ -84,7 +93,7 @@ func (s *db_store) InsertUser(agent_id, their_uname, their_ugrant string, their_
 	row := s.db.QueryRow(query, their_uid)
 	e = row.Scan(&uid)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Error(msg, zap.Int64("their_uid", their_uid), zap.Error(e))
 		e = errs.E12001.Error()
 		return
 	}
@@ -97,7 +106,7 @@ func NewDBStore() DBStore {
 	var di = utils.GetDI()
 
 	return &db_store{
-		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
-		db:       di.MustGet(utils.SERVICE_MARIADB).(*sql.DB),
+		logger: di.MustGet(internal.LOGGER_SYSTEM).(*zap.Logger),
+		db:     di.MustGet(internal.SERVICE_MARIADB).(*sql.DB),
 	}
 }

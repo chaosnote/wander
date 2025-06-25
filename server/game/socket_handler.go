@@ -1,19 +1,23 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/chaosnote/melody"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/chaosnote/wander/model"
 	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/model/message"
-	"github.com/chaosnote/wander/utils"
 )
 
 func (s *store) handleConnect(session *melody.Session) {
 	player := session.MustGet(model.KEY_UID).(member.Player)
-	s.Debug(utils.LogFields{"connect_uid": player.UID})
+
+	s.logger.Info(fmt.Sprintf("uid(%s) etner", player.UID))
+
 	session.Set(model.KEY_UID, player)
 	s.SessionAdd(player.UID, session)
 
@@ -28,7 +32,7 @@ func (s *store) handleConnect(session *melody.Session) {
 
 func (s *store) handleDisconnect(session *melody.Session) {
 	player := session.MustGet(model.KEY_UID).(member.Player)
-	s.Debug(utils.LogFields{"disconnect_uid": player.UID})
+	s.logger.Info(fmt.Sprintf("uid(%s) leave", player.UID))
 	s.game_impl.PlayerExit(player)
 	s.SessionRemove(player.UID)
 
@@ -46,6 +50,7 @@ func (s *store) handleDisconnect(session *melody.Session) {
 }
 
 func (s *store) handleMessageBinary(session *melody.Session, source []byte) {
+	const msg = "handleMessageBinary"
 	content, exists := session.Get(model.KEY_UID)
 	if !exists {
 		return
@@ -55,7 +60,7 @@ func (s *store) handleMessageBinary(session *melody.Session, source []byte) {
 	pack := &message.GameMessage{}
 	e := proto.Unmarshal(source, pack)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Info(msg, zap.Error(e))
 		pack.Reset()
 		e = errs.E00005.Error()
 		*pack.Error = e.Error()

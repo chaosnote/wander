@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 
 	"github.com/chaosnote/wander/model"
 	"github.com/chaosnote/wander/model/errs"
@@ -12,6 +13,8 @@ import (
 )
 
 func (s *store) HandleGameConn(w http.ResponseWriter, r *http.Request) {
+	const msg = "HandleGameConn"
+
 	var e error
 	player := member.Player{
 		ReqLogin: member.ReqLogin{
@@ -23,7 +26,7 @@ func (s *store) HandleGameConn(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if e != nil {
-			s.Info(utils.LogFields{"error": e.Error()})
+			s.logger.Info(msg, zap.Error(e))
 
 			conn, inrupt := s.mel_store.Upgrader.Upgrade(w, r, w.Header())
 			if inrupt != nil {
@@ -47,7 +50,7 @@ func (s *store) HandleGameConn(w http.ResponseWriter, r *http.Request) {
 
 	e = s.mel_store.HandleRequestWithKeys(w, r, keys)
 	if e != nil {
-		s.Error(e)
+		s.logger.Info(msg, zap.Error(e))
 		e = errs.E30006.Error()
 		return
 	}

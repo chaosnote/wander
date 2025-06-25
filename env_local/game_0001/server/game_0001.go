@@ -1,14 +1,16 @@
 package main
 
 import (
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
+
+	_ "github.com/looplab/fsm"
+
 	"github.com/chaosnote/wander/game"
 	"github.com/chaosnote/wander/model/errs"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/model/message"
 	"github.com/chaosnote/wander/utils"
-	"google.golang.org/protobuf/proto"
-
-	_ "github.com/looplab/fsm"
 
 	"idv/chris/protobuf"
 	"idv/chris/server/model"
@@ -17,29 +19,33 @@ import (
 // 多人連線
 
 type Game0001 struct {
-	utils.LogStore
+	logger *zap.Logger
 	game.GameStore
 }
 
-func (g *Game0001) Start(logger utils.LogStore) {
+func (g *Game0001) Start() {
+	var di = utils.GetDI()
+	g.logger = di.MustGet(game.LOGGER_GAME, "0001").(*zap.Logger)
+
 	// 遊戲啟動 - 讀取設定檔
 	//
 	// 建立 loger
 	// 建立 (桌/室)
 	//
-	g.LogStore = logger
-	g.Debug(utils.LogFields{"tip": "game_start"})
+	g.logger.Debug("game_start")
 }
 
 func (g *Game0001) Close() {
 	// 遊戲關閉
 	// ∟ 遊戲室(桌/室)是否回合結束
 	// ∟
-	g.Debug(utils.LogFields{"tip": "game_close"})
+	g.logger.Debug("game_close")
 }
 
 func (g *Game0001) PlayerJoin(player member.Player) {
-	g.Debug(utils.LogFields{"join": player})
+	const msg = "PlayerJoin"
+	player_logger := utils.GetDI().MustGet(game.LOGGER_GAME, player.UID).(*zap.Logger)
+	player_logger.Debug(msg, zap.Any("player", player))
 
 	// 玩家狀態
 	// ∟ 選擇
@@ -57,7 +63,7 @@ func (g *Game0001) PlayerJoin(player member.Player) {
 
 	payload, e := proto.Marshal(content)
 	if e != nil {
-		g.Info(utils.LogFields{"error": e.Error()})
+		player_logger.Error(msg, zap.Error(e))
 		e = errs.E00005.Error()
 		return
 	}

@@ -4,11 +4,14 @@ import (
 	"errors"
 	"time"
 
+	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
+	"github.com/chaosnote/wander/data_center/internal"
 	"github.com/chaosnote/wander/model"
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/model/subj"
 	"github.com/chaosnote/wander/utils"
-	"github.com/nats-io/nats.go"
 )
 
 type NatsStore interface {
@@ -16,7 +19,7 @@ type NatsStore interface {
 }
 
 type nats_store struct {
-	utils.LogStore
+	logger *zap.Logger
 
 	conn *nats.Conn
 }
@@ -40,7 +43,7 @@ func NewNatsStore() NatsStore {
 	var di = utils.GetDI()
 
 	return &nats_store{
-		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
-		conn:     di.MustGet(utils.SERVICE_NATS).(*nats.Conn),
+		logger: di.MustGet(internal.LOGGER_SYSTEM).(*zap.Logger),
+		conn:   di.MustGet(internal.SERVICE_NATS).(*nats.Conn),
 	}
 }

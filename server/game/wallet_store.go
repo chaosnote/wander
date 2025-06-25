@@ -9,6 +9,7 @@ import (
 	"github.com/chaosnote/wander/model/member"
 	"github.com/chaosnote/wander/utils"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 type WalletAction uint
@@ -44,8 +45,8 @@ type WalletStore interface {
 }
 
 type wallet_store struct {
-	utils.LogStore
-	db *sql.DB
+	logger *zap.Logger
+	db     *sql.DB
 }
 
 func (s *wallet_store) store(wallet Wallet) (e error) {
@@ -77,6 +78,7 @@ func (s *wallet_store) store(wallet Wallet) (e error) {
 }
 
 func (s *wallet_store) Takeout(wallet_setting WalletSetting) (e error) {
+	const msg = "Takeout"
 	wallet := Wallet{
 		WalletSetting:       wallet_setting,
 		ActionType:          TAKEOUT,
@@ -84,7 +86,7 @@ func (s *wallet_store) Takeout(wallet_setting WalletSetting) (e error) {
 	}
 	e = s.store(wallet)
 	if e != nil {
-		s.Error(e)
+		s.logger.Error(msg, zap.Error(e))
 		e = errs.E32001.Error()
 	}
 	return
@@ -97,6 +99,8 @@ func (s *wallet_store) Rollback(wallet_setting WalletSetting) {}
 func (s *wallet_store) Income(wallet_setting WalletSetting) {}
 
 func (s *wallet_store) Putin(wallet_setting WalletSetting) (e error) {
+	const msg = "Putin"
+
 	wallet := Wallet{
 		WalletSetting:       wallet_setting,
 		ActionType:          PUTIN,
@@ -104,7 +108,7 @@ func (s *wallet_store) Putin(wallet_setting WalletSetting) (e error) {
 	}
 	e = s.store(wallet)
 	if e != nil {
-		s.Error(e)
+		s.logger.Error(msg, zap.Error(e))
 		e = errs.E32002.Error()
 	}
 	return
@@ -118,7 +122,7 @@ func NewWalletStore() WalletStore {
 	var di = utils.GetDI()
 
 	return &wallet_store{
-		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
-		db:       di.MustGet(utils.SERVICE_MARIADB).(*sql.DB),
+		logger: di.MustGet(LOGGER_SYSTEM).(*zap.Logger),
+		db:     di.MustGet(SERVICE_MARIADB).(*sql.DB),
 	}
 }

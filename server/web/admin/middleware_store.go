@@ -1,46 +1,51 @@
 package admin
 
 import (
-	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/chaosnote/wander/utils"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type MiddlewareStore interface {
-	Logging(next http.Handler) http.Handler
-	JSON(next http.Handler) http.Handler
+	Logging() gin.HandlerFunc
 }
 
 type middleware_store struct {
 }
 
-func (s *middleware_store) Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger := utils.GetDI().MustGet(utils.SERVICE_LOGGER, "router").(utils.LogStore)
+func (s *middleware_store) Logging() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var di = utils.GetDI()
+		logger := di.MustGet(LOGGER_GIN).(*zap.Logger)
 
-		startTime := time.Now()
-		next.ServeHTTP(w, r)
-		endTime := time.Now()
+		start_time := time.Now()
 
-		duration := endTime.Sub(startTime)
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+		c.Next()
 
-		logger.Info(utils.LogFields{
-			"method":    r.Method,
-			"path":      r.RequestURI,
-			"duration":  fmt.Sprintf("%v", duration),
-			"client_ip": utils.ParseIP(r),
-		})
-	})
-}
+		latency := time.Since(start_time)
 
-func (s *middleware_store) JSON(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	})
+		param := map[string]interface{}{
+			"status":     c.Writer.Status(),
+			"method":     c.Request.Method,
+			"path":       path,
+			"query":      query,
+			"ip":         c.ClientIP(),
+			"user-agent": c.Request.UserAgent(),
+			"latency":    latency,
+		}
+
+		const msg = "Request Record"
+		if len(c.Errors) > 0 {
+			param["errors"] = c.Errors.Errors()
+		}
+
+		logger.Info(msg, zap.Any("param", param))
+
+	}
 }
 
 //-----------------------------------------------

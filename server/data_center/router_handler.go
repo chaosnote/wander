@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 
 	"github.com/chaosnote/wander/model"
 	"github.com/chaosnote/wander/model/api"
@@ -30,6 +31,8 @@ var (
 )
 
 func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
+	const msg = "HandleGuestNew"
+
 	const (
 		agent_id     = "92aa258f95834a8bb35f74d5c21787d8"
 		their_ugrant = "1"
@@ -57,14 +60,14 @@ func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 	var res = map[string]any{}
 	res["token"], e = utils.RSAEncode([]byte(fmt.Sprintf("%s|%s", agent_id, uid)))
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Info(msg, zap.Error(e))
 		e = errs.E12001.Error()
 		return
 	}
 
 	output, e := json.Marshal(api.HttpResponse{Code: api.HttpStatusOK, Content: res})
 	if e != nil {
-		s.Error(e)
+		s.logger.Info(msg, zap.Error(e))
 		e = errs.E00001.Error()
 		return
 	}
@@ -72,6 +75,8 @@ func (s *store) HandleGuestNew(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
+	const msg = "HandlePlayerLogin"
+
 	var e error
 	var st = time.Now()
 
@@ -85,16 +90,16 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	player := &member.Player{}
 	e = utils.HttpRequestJSONUnmarshal(r.Body, &player.ReqLogin)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Info(msg, zap.Error(e))
 		e = errs.E10004.Error()
 		return
 	}
-	s.Debug(utils.LogFields{"params": player.ReqLogin})
+	s.logger.Debug(msg, zap.Any("params", player.ReqLogin))
 
 	var data []byte
 	data, e = utils.HexDecode(player.Token)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Info(msg, zap.Error(e))
 		e = errs.E00002.Error()
 		return
 	}
@@ -102,7 +107,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	var plaintext []byte
 	plaintext, e = utils.RSADecode(string(data))
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error()})
+		s.logger.Info(msg, zap.Error(e))
 		e = errs.E00003.Error()
 		return
 	}
@@ -111,10 +116,10 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	player.AgentID = list[0]
 	player.UID = list[1]
 
-	s.Info(utils.LogFields{
+	s.logger.Debug(msg, zap.Any("params", utils.CustomField{
 		"agent_id": player.AgentID,
 		"uid":      player.UID,
-	})
+	}))
 
 	var timeout = 5 * time.Second
 	ctx := r.Context()
@@ -153,7 +158,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 
 	if !s.BlackNotExisted(player.UID) {
 		e = errs.E14001.Error()
-		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 		return
 	}
 
@@ -169,7 +174,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 
 	e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, 0)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 		return
 	}
 	defer func() {
@@ -177,7 +182,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 			e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, player.Wallet)
 		}
 		if e != nil {
-			s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+			s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 			return
 		}
 	}()
@@ -185,7 +190,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	var money float64
 	money, e = s.APIGet(player.AgentID).Takeout(ctx, player.TheirUID)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 		e = errs.E10001.Error()
 		return
 	}
@@ -195,14 +200,14 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 			player.Wallet, e = s.APIGet(player.AgentID).Putin(ctx, player.TheirUID, player.Wallet)
 		}
 		if e != nil {
-			s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+			s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 			return
 		}
 	}()
 
 	output, e := json.Marshal(api.HttpResponse{Code: api.HttpStatusOK, Content: player.ResLogin})
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 		e = errs.E00001.Error()
 		return
 	}
@@ -210,7 +215,7 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 	select {
 	case <-ctx.Done():
 		e = errs.E10005.Error()
-		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 		return
 	case <-ctx_first.Done():
 		if time.Since(st) >= timeout {
@@ -218,42 +223,44 @@ func (s *store) HandlePlayerLogin(w http.ResponseWriter, r *http.Request) {
 		} else {
 			e = errs.E10005.Error()
 		}
-		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 		return
 	default:
 	}
 
 	_, e = w.Write(output)
 	if e != nil {
-		s.Info(utils.LogFields{"error": e.Error(), "uid": player.UID})
+		s.logger.Info(msg, zap.String("uid", player.UID), zap.Error(e))
 		e = errs.E10006.Error()
 	}
 }
 
 func (s *store) HandlePlayerLogout(w http.ResponseWriter, r *http.Request) {
+	const msg = "HandlePlayerLogout"
+
 	var body map[string]any
 	e := utils.HttpRequestJSONUnmarshal(r.Body, &body)
 	if e != nil {
-		s.Error(e)
+		s.logger.Info(msg, zap.Error(e))
 		return
 	}
 
 	uid := body[model.KEY_UID].(string)
 	player, ok := s.PlayerRemove(uid)
 	if !ok {
-		s.Info(utils.LogFields{"error": fmt.Sprintf("lost uid(%s)", uid)})
+		s.logger.Info(msg, zap.Error(fmt.Errorf("lost uid(%s)", uid)))
 		return
 	}
 
 	player.Wallet = body[model.KEY_WALLET].(float64)
 	player.Wallet, e = s.APIGet(player.AgentID).Putin(r.Context(), player.TheirUID, player.Wallet)
 	if e != nil {
-		s.Error(e)
+		s.logger.Info(msg, zap.Error(e), zap.String("uid", uid))
 		return
 	}
 	e = s.UpdateUserIPAndWallet(player.AgentID, player.UID, player.IP, player.Wallet)
 	if e != nil {
-		s.Error(e)
+		s.logger.Info(msg, zap.Error(e), zap.String("uid", uid))
 		return
 	}
 }

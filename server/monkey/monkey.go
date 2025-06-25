@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
 
 	"github.com/chaosnote/melody"
 	"github.com/chaosnote/wander/model/api"
@@ -40,10 +41,12 @@ type MonkeyStore interface {
 }
 
 type monkey_store struct {
-	utils.LogStore
+	logger *zap.Logger
 }
 
 func (s *monkey_store) GetToken() (token string) {
+	const msg = "GetToken"
+
 	client := resty.New()
 	client.SetTimeout(5 * time.Second)
 
@@ -67,25 +70,26 @@ func (s *monkey_store) GetToken() (token string) {
 		panic(output.Code)
 	}
 	token = output.Content["token"]
-	s.Debug(utils.LogFields{"token": token})
+	s.logger.Debug(msg, zap.String("token", token))
 	return
 }
 
 func (s *monkey_store) Dial(token string) (e error) {
+	const msg = "Dial"
 	u := url.URL{
 		Scheme:   "ws",
 		Host:     ":8081",
 		Path:     "/ws/00/0001",
 		RawQuery: fmt.Sprintf("token=%s", token),
 	}
-	s.Debug(utils.LogFields{"url": u.String()})
+	s.logger.Debug(msg, zap.String("url", u.String()))
 
 	e = melody.NewMonkey().Dial(
 		u,
 		map[string]any{},
 	)
 	if e != nil {
-		s.Error(e)
+		s.logger.Error(msg, zap.Error(e))
 	}
 	return
 }
@@ -94,6 +98,6 @@ func (s *monkey_store) Dial(token string) (e error) {
 
 func NewMonkeyStore() MonkeyStore {
 	return &monkey_store{
-		LogStore: utils.NewConsoleLogger(1),
+		logger: utils.NewConsoleLogger(1),
 	}
 }

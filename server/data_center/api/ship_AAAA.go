@@ -3,11 +3,14 @@ package api
 import (
 	"context"
 
+	"go.uber.org/zap"
+
+	"github.com/chaosnote/wander/data_center/internal"
 	"github.com/chaosnote/wander/utils"
 )
 
 type Ship_AAAA struct {
-	utils.LogStore
+	logger *zap.Logger
 }
 
 func (s *Ship_AAAA) Takeout(ctx context.Context, their_uid string) (money float64, e error) {
@@ -24,10 +27,11 @@ func (s *Ship_AAAA) Putin(ctx context.Context, their_uid string, money float64) 
 func NewShipAAAA(setting agent) Ship {
 	di := utils.GetDI()
 	ship := &Ship_AAAA{
-		LogStore: di.MustGet(utils.SERVICE_LOGGER).(utils.LogStore),
+		logger: di.MustGet(internal.LOGGER_API, "AAAA").(*zap.Logger),
 	}
 
-	ship.Debug(utils.LogFields{"setting": setting})
+	const msg = "NewShipAAAA"
+	ship.logger.Debug(msg, zap.Any("setting", setting))
 
 	return ship
 }
