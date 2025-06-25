@@ -173,7 +173,6 @@ func (s *store) Close() {
 	di.MustGet(SERVICE_REDIS).(*redis.Client).Close()
 	di.MustGet(SERVICE_MONGO).(*mongo.Client).Disconnect(context.TODO())
 	di.MustGet(LOGGER_SYSTEM).(*zap.Logger).Sync()
-	di.MustGet(LOGGER_GAME).(*zap.Logger).Sync()
 }
 
 //-----------------------------------------------

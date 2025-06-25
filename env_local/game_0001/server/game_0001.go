@@ -40,11 +40,13 @@ func (g *Game0001) Close() {
 	// ∟ 遊戲室(桌/室)是否回合結束
 	// ∟
 	g.logger.Debug("game_close")
+	g.logger.Sync()
 }
 
 func (g *Game0001) PlayerJoin(player member.Player) {
 	const msg = "PlayerJoin"
 	player_logger := utils.GetDI().MustGet(game.LOGGER_GAME, player.UID).(*zap.Logger)
+	defer player_logger.Sync()
 	player_logger.Debug(msg, zap.Any("player", player))
 
 	// 玩家狀態

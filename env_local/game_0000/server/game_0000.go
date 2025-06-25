@@ -35,11 +35,14 @@ func (g *Game0000) Start() {
 func (g *Game0000) Close() {
 	// 遊戲關閉
 	g.logger.Debug("game_close")
+	g.logger.Sync()
 }
 
 func (g *Game0000) PlayerJoin(player member.Player) {
 	const msg = "PlayerJoin"
 	player_logger := utils.GetDI().MustGet(game.LOGGER_GAME, player.UID).(*zap.Logger)
+	defer player_logger.Sync()
+
 	player_logger.Debug(msg, zap.Any("player", player))
 
 	// 是否有斷點資訊
@@ -74,6 +77,7 @@ func (g *Game0000) PlayerJoin(player member.Player) {
 func (g *Game0000) PlayerMessageBinary(player member.Player, pack *message.GameMessage) {
 	const msg = "PlayerJoin"
 	player_logger := utils.GetDI().MustGet(game.LOGGER_GAME, player.UID).(*zap.Logger)
+	defer player_logger.Sync()
 
 	// 處理玩家封包
 	// ∟ 斷點

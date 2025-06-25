@@ -32,7 +32,7 @@ func NewConsoleLogger(callerSkip int) *zap.Logger {
 	// config.EncoderConfig.MessageKey = zapcore.OmitKey
 	config.EncoderConfig.EncodeTime = encodeTimeExcludingTimezone
 	// config.EncoderConfig.TimeKey = zapcore.OmitKey
-	// config.EncoderConfig.CallerKey = zapcore.OmitKey
+	config.EncoderConfig.CallerKey = zapcore.OmitKey
 	config.Encoding = "json"
 
 	logger, err := config.Build(zap.AddCallerSkip(callerSkip))
@@ -57,7 +57,8 @@ func NewFileLogger(dir string, callerSkip int) *zap.Logger {
 	encoderConfig.LevelKey = zapcore.OmitKey
 	// encoderConfig.MessageKey = zapcore.OmitKey
 	encoderConfig.EncodeTime = encodeTimeExcludingTimezone
-	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder // 短檔案路徑
+	encoderConfig.CallerKey = zapcore.OmitKey
+	// encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder // 短檔案路徑
 
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderConfig), // zapcore.NewConsoleEncoder(encoderConfig),
